@@ -18,17 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Set this to your canonical site URL for correct RSS/SEO:
-      # - User pages: https://<user>.github.io
-      # - Project pages: https://<user>.github.io/<repo>
-      SITE_URL: ${{ vars.SITE_URL }}
-      # Optional override:
-      BASE_PATH: ${{ vars.BASE_PATH }}
-      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-      NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-      NOTION_PAGE_IDS: ${{ secrets.NOTION_PAGE_IDS }}
-      NOTION_TARGET_COLLECTION: ${{ vars.NOTION_TARGET_COLLECTION }}
-      NOTION_DRAFT: ${{ vars.NOTION_DRAFT }}
+      # User pages canonical URL
+      SITE_URL: https://tronglinh23.github.io
+      BASE_PATH: /
 
     steps:
       - name: Checkout
@@ -42,10 +34,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Optional Notion sync
-        if: ${{ secrets.NOTION_TOKEN != '' && (secrets.NOTION_DATABASE_ID != '' || secrets.NOTION_PAGE_IDS != '') }}
-        run: npm run sync:notion
 
       - name: Build
         run: npm run build
