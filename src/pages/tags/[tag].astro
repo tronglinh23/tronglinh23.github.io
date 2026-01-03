@@ -4,7 +4,7 @@ import PostCard from '@/components/PostCard.astro';
 import { getCollection } from 'astro:content';
 import { slugifyTag } from '@/lib/utils';
 import { basePath } from '@/lib/base';
-import { formatDate, getEntryMtime } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 export async function getStaticPaths() {
   const collections = ['blog', 'links'] as const;
@@ -21,7 +21,7 @@ const collections = ['blog', 'links'] as const;
 const all = (await Promise.all(collections.map((c) => getCollection(c)))).flat().filter((p) => !p.data.draft);
 
 const matches = all.filter((p) => (p.data.tags ?? []).some((t) => slugifyTag(t) === tag))
-  .sort((a, b) => getEntryMtime(b) - getEntryMtime(a));
+  .sort((a, b) => b.data.date - a.data.date);
 
 const human = matches.length ? (matches[0].data.tags ?? []).find((t) => slugifyTag(t) === tag) : tag;
 ---

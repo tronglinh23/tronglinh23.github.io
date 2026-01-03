@@ -3,12 +3,12 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import SearchAndFilters from '@/components/SearchAndFilters.astro';
 import PostCard from '@/components/PostCard.astro';
 import { getCollection } from 'astro:content';
-import { formatDate, getEntryMtime } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { basePath } from '@/lib/base';
 
 const posts = (await getCollection('blog'))
   .filter((p) => !p.data.draft)
-  .sort((a, b) => getEntryMtime(b) - getEntryMtime(a));
+  .sort((a, b) => b.data.date - a.data.date);
 
 const items = posts.map((p) => ({
   title: p.data.title,

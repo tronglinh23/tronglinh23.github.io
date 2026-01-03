@@ -1,0 +1,29 @@
+---
+title: Using MDX components (Callout / Spoiler / TerminalBlock)
+description: Quick reference for using built-in components inside your posts.
+date: 2025-12-01
+tags:
+  - mdx
+  - components
+  - howto
+category: general
+draft: true
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+import Spoiler from '@/components/mdx/Spoiler.astro';
+import TerminalBlock from '@/components/mdx/TerminalBlock.astro';
+
+<Callout type="tip" title="Import once">
+At the top of any MDX file, import the components you want to use.
+</Callout>
+
+<TerminalBlock title="$ example">
+curl -sS https://example.com | head
+</TerminalBlock>
+
+<Spoiler summary="Reveal payload">
+```js
+console.log("secret");
+```
+</Spoiler>
