@@ -1,0 +1,19 @@
+<div class="pointer-events-none fixed left-0 top-0 z-50 h-1 w-full bg-transparent">
+  <div id="rp" class="h-full w-0 bg-white/70" style="box-shadow: 0 0 18px rgba(124,58,237,0.55)"></div>
+</div>
+
+<script>
+  (function () {
+    const bar = document.getElementById('rp');
+    if (!bar) return;
+    const onScroll = () => {
+      const h = document.documentElement;
+      const scrolled = h.scrollTop;
+      const max = h.scrollHeight - h.clientHeight;
+      const p = max > 0 ? (scrolled / max) * 100 : 0;
+      bar.style.width = p + '%';
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+</script>

@@ -1,0 +1,21 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import AnimatedButton from '@/components/ui/AnimatedButton.astro';
+import { basePath } from '@/lib/base';
+---
+
+<BaseLayout title="404" noProgress>
+  <div class="mx-auto max-w-2xl text-center">
+    <div class="mx-auto h-24 w-24 animate-floaty rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-glass">
+      <img class="h-full w-full" src={`${basePath}/astronaut.svg`} alt="astronaut" />
+    </div>
+    <h1 class="mt-6 text-3xl font-semibold text-white/95">Lost in space</h1>
+    <p class="mt-3 text-white/70">
+      This page drifted out of orbit. Head back to the command center.
+    </p>
+    <div class="mt-6 flex justify-center gap-3">
+      <AnimatedButton href={`${basePath}/`} label="Go home" />
+      <a class="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white" href={`${basePath}/blog`}>Browse blog →</a>
+    </div>
+  </div>
+</BaseLayout>

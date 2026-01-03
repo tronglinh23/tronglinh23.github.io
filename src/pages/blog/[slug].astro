@@ -1,0 +1,51 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import TOC from '@/components/TOC.astro';
+import TagPill from '@/components/TagPill.astro';
+import { getCollection } from 'astro:content';
+import { formatDate } from '@/lib/utils';
+import { basePath } from '@/lib/base';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('blog')).filter((p) => !p.data.draft);
+  return posts.map((p) => ({ params: { slug: p.slug }, props: { p } }));
+}
+
+const { p } = Astro.props;
+const { Content, headings } = await p.render();
+---
+
+<BaseLayout title={p.data.title} description={p.data.description}>
+  <div class="grid gap-10 lg:grid-cols-[1fr_260px]">
+    <article class="min-w-0">
+      <div class="mb-8">
+        <div class="text-sm text-white/55">
+          {formatDate(p.data.date)}{p.data.updated ? ` · updated ${formatDate(p.data.updated)}` : ''}
+          {p.data.ctf_event ? ` · ${p.data.ctf_event}` : ''}
+        </div>
+        <h1 class="mt-3 text-3xl font-semibold tracking-tight text-white/95 md:text-4xl">{p.data.title}</h1>
+        <p class="mt-3 text-white/70">{p.data.description}</p>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          {(p.data.tags ?? []).map((t) => <TagPill tag={t} />)}
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2 text-xs text-white/55">
+          {p.data.category && <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">{p.data.category}</span>}
+          {p.data.difficulty && <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">{p.data.difficulty}</span>}
+        </div>
+      </div>
+
+      <div class="prose prose-invert max-w-none">
+        <Content />
+      </div>
+
+      <div class="mt-10 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 p-5">
+        <a class="text-sm text-white/70 hover:text-white" href={`${basePath}/blog`}>← Back to list</a>
+        <a class="text-sm text-white/70 hover:text-white" href={`${basePath}/`}>Home →</a>
+      </div>
+    </article>
+
+    <TOC headings={headings} />
+  </div>
+</BaseLayout>

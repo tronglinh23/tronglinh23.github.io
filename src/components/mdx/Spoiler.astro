@@ -1,0 +1,12 @@
+---
+const { summary = 'Spoiler (click to reveal)' } = Astro.props;
+---
+
+<details class="my-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glass">
+  <summary class="cursor-pointer select-none text-sm text-white/80 hover:text-white">
+    {summary}
+  </summary>
+  <div class="prose prose-invert mt-4 max-w-none text-sm">
+    <slot />
+  </div>
+</details>

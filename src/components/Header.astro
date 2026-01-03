@@ -1,0 +1,38 @@
+---
+import { site } from '@/config/site';
+import AnimatedButton from '@/components/ui/AnimatedButton.astro';
+import { basePath } from '@/lib/base';
+---
+
+<header class="sticky top-0 z-30 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <a class="group flex items-center gap-3" href={`${basePath}/`}>
+      <img class="h-9 w-9 animate-floaty" src={`${basePath}/astronaut.svg`} alt="astronaut" />
+      <div class="leading-tight">
+        <div class="font-semibold text-white/90 group-hover:text-white">{site.title}</div>
+        <div class="text-xs text-white/60">{site.author.tagline}</div>
+      </div>
+    </a>
+
+    <nav class="hidden items-center gap-2 md:flex">
+      {site.nav.map((item) => (
+        <a
+          class="rounded-xl px-3 py-2 text-sm text-white/75 hover:bg-white/5 hover:text-white/95"
+          href={`${basePath}${item.href}`}
+        >
+          {item.label}
+        </a>
+      ))}
+      <AnimatedButton href={`${basePath}/blog`} label="Explore" />
+    </nav>
+
+    <div class="md:hidden">
+      <a
+        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
+        href={`${basePath}/blog`}
+      >
+        Menu →
+      </a>
+    </div>
+  </div>
+</header>

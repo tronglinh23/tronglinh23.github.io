@@ -1,0 +1,37 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SearchAndFilters from '@/components/SearchAndFilters.astro';
+import PostCard from '@/components/PostCard.astro';
+import { getCollection } from 'astro:content';
+import { formatDate, getEntryMtime } from '@/lib/utils';
+import { basePath } from '@/lib/base';
+
+const posts = (await getCollection('blog'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => getEntryMtime(b) - getEntryMtime(a));
+
+const items = posts.map((p) => ({
+  title: p.data.title,
+  description: p.data.description,
+  date: p.data.date.toISOString(),
+  dateLabel: formatDate(p.data.date),
+  href: `${basePath}/blog/${p.slug}`,
+  tags: p.data.tags ?? [],
+  category: p.data.category,
+  difficulty: p.data.difficulty,
+  ctf_event: p.data.ctf_event,
+}));
+---
+
+<BaseLayout title="Blog" description="CTF writeups, research notes, and longer-form posts.">
+  <div class="mb-6">
+    <h1 class="text-3xl font-semibold text-white/95">Blog</h1>
+    <p class="mt-2 text-white/70">CTF writeups, research notes, and deep dives.</p>
+  </div>
+
+  <SearchAndFilters items={items} />
+
+  <div id="results" class="mt-6 grid gap-4">
+    {posts.map((p) => <PostCard entry={p} href={`${basePath}/blog/${p.slug}`} />)}
+  </div>
+</BaseLayout>

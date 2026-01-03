@@ -1,0 +1,232 @@
+---
+/**
+ * Props:
+ * - items: array of { title, description, date, href, tags, category, difficulty, ctf_event }
+ * - initialCategory?: string
+ */
+const { items, initialCategory } = Astro.props;
+
+const unique = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const categories = unique(items.map((i) => i.category));
+const difficulties = unique(items.map((i) => i.difficulty));
+const events = unique(items.map((i) => i.ctf_event));
+const tags = unique(items.flatMap((i) => i.tags || []));
+
+const payload = JSON.stringify({ items, categories, difficulties, events, tags, initialCategory }).replace(
+  /<\//g,
+  '<\\/'
+);
+---
+
+<div class="glass rounded-3xl p-5 shadow-glass">
+  <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+    <input
+      id="q"
+      class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/85 placeholder:text-white/40 focus:border-white/20 focus:outline-none"
+      placeholder="Search title, tags, description…"
+      autocomplete="off"
+    />
+    <select
+      id="cat"
+      class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/85 focus:border-white/20 focus:outline-none"
+    >
+      <option value="">All categories</option>
+      {categories.map((c) => <option value={c}>{c}</option>)}
+    </select>
+    <select
+      id="diff"
+      class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/85 focus:border-white/20 focus:outline-none"
+    >
+      <option value="">All difficulty</option>
+      {difficulties.map((d) => <option value={d}>{d}</option>)}
+    </select>
+    <select
+      id="evt"
+      class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/85 focus:border-white/20 focus:outline-none"
+    >
+      <option value="">All events</option>
+      {events.map((e) => <option value={e}>{e}</option>)}
+    </select>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <div class="text-xs text-white/55">Quick tags:</div>
+    <div id="tagCloud" class="flex flex-wrap gap-2"></div>
+  </div>
+
+  <div class="mt-4 flex items-center justify-between text-xs text-white/55">
+    <div><span id="count"></span></div>
+    <button
+      id="reset"
+      class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/70 hover:bg-white/10 hover:text-white"
+      type="button"
+    >
+      Reset
+    </button>
+  </div>
+</div>
+
+<script type="application/json" id="search-data" set:html={payload}></script>
+
+<script is:inline>
+  const dataEl = document.getElementById('search-data');
+  const DATA = dataEl ? JSON.parse(dataEl.textContent || '{}') : {};
+
+  function initSearch() {
+    const elQ = document.getElementById('q');
+    const elCat = document.getElementById('cat');
+    const elDiff = document.getElementById('diff');
+    const elEvt = document.getElementById('evt');
+    const elCount = document.getElementById('count');
+    const elTagCloud = document.getElementById('tagCloud');
+    const elReset = document.getElementById('reset');
+    const list = document.getElementById('results');
+
+    if (!elQ || !elCat || !elDiff || !elEvt || !elCount || !elTagCloud || !elReset || !list) return;
+
+    function renderTags() {
+      elTagCloud.innerHTML = '';
+      const top = (DATA.tags || [])
+        .filter((t) => typeof t === 'string' && t.trim().length > 0)
+        .slice(0, 18);
+      top.forEach((t) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className =
+          'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75 hover:bg-white/10 hover:text-white';
+        b.textContent = '#' + t;
+        b.addEventListener('click', () => {
+          elQ.value = t;
+          apply();
+        });
+        elTagCloud.appendChild(b);
+      });
+    }
+
+    function matches(item, q, cat, diff, evt) {
+      if (cat && item.category !== cat) return false;
+      if (diff && item.difficulty !== diff) return false;
+      if (evt && item.ctf_event !== evt) return false;
+
+      if (!q) return true;
+      const hay = [
+        item.title,
+        item.description,
+        item.category,
+        item.difficulty,
+        item.ctf_event,
+        ...(item.tags || []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return hay.includes(q.toLowerCase());
+    }
+
+    function createEl(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+
+    function renderResults(items) {
+      list.innerHTML = '';
+      if (!items.length) {
+        list.appendChild(
+          createEl(
+            'div',
+            'rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/65',
+            'No matches. Try a different query or clear filters.'
+          )
+        );
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      items.forEach((it) => {
+        const card = createEl(
+          'a',
+          'group block rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glass transition hover:border-white/20 hover:bg-white/10'
+        );
+        card.href = it.href;
+
+        const header = createEl('div', 'flex items-start justify-between gap-4');
+        const left = createEl('div');
+        left.appendChild(createEl('div', 'text-sm text-white/55', it.dateLabel || ''));
+        left.appendChild(createEl('h3', 'mt-2 text-lg font-semibold text-white/90 group-hover:text-white', it.title));
+        left.appendChild(createEl('p', 'mt-2 line-clamp-2 text-sm text-white/70', it.description));
+
+        const right = createEl(
+          'div',
+          'hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-white/70 md:flex',
+          '↗'
+        );
+        header.appendChild(left);
+        header.appendChild(right);
+        card.appendChild(header);
+
+        const tagsWrap = createEl('div', 'mt-4 flex flex-wrap gap-2');
+        (it.tags || [])
+          .filter((t) => typeof t === 'string' && t.trim().length > 0)
+          .slice(0, 5)
+          .forEach((t) => {
+          tagsWrap.appendChild(
+            createEl('span', 'inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75', `#${t}`)
+          );
+          });
+        card.appendChild(tagsWrap);
+
+        const meta = createEl('div', 'mt-4 flex flex-wrap gap-2 text-xs text-white/55');
+        if (it.ctf_event) meta.appendChild(createEl('span', 'rounded-full border border-white/10 bg-black/20 px-3 py-1', it.ctf_event));
+        if (it.category) meta.appendChild(createEl('span', 'rounded-full border border-white/10 bg-black/20 px-3 py-1', it.category));
+        if (it.difficulty) meta.appendChild(createEl('span', 'rounded-full border border-white/10 bg-black/20 px-3 py-1', it.difficulty));
+        card.appendChild(meta);
+
+        frag.appendChild(card);
+      });
+      list.appendChild(frag);
+    }
+
+    function apply() {
+      const q = elQ.value.trim();
+      const cat = elCat.value;
+      const diff = elDiff.value;
+      const evt = elEvt.value;
+
+      const filtered = (DATA.items || []).filter((it) => matches(it, q, cat, diff, evt));
+      elCount.textContent = filtered.length + ' results';
+      renderResults(filtered);
+    }
+
+    let applyTimer;
+    function scheduleApply() {
+      clearTimeout(applyTimer);
+      applyTimer = setTimeout(apply, 120);
+    }
+
+    elQ.addEventListener('input', scheduleApply);
+    elCat.addEventListener('change', apply);
+    elDiff.addEventListener('change', apply);
+    elEvt.addEventListener('change', apply);
+
+    elReset.addEventListener('click', () => {
+      elQ.value = '';
+      elCat.value = '';
+      elDiff.value = '';
+      elEvt.value = '';
+      apply();
+    });
+
+    renderTags();
+    if (DATA.initialCategory) elCat.value = DATA.initialCategory;
+    apply();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
+</script>

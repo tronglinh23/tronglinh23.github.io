@@ -1,0 +1,29 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Hero from '@/components/Hero.astro';
+import PostCard from '@/components/PostCard.astro';
+import { getCollection } from 'astro:content';
+import { getEntryMtime } from '@/lib/utils';
+import { basePath } from '@/lib/base';
+
+const blog = (await getCollection('blog'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => getEntryMtime(b) - getEntryMtime(a))
+  .slice(0, 3);
+---
+
+<BaseLayout title="Home">
+  <Hero />
+
+  <div class="mt-10 grid gap-6">
+    <section>
+      <div class="mb-3 flex items-end justify-between">
+        <h2 class="text-xl font-semibold text-white/90">Latest posts</h2>
+        <a class="text-sm text-white/65 hover:text-white" href={`${basePath}/blog`}>View all →</a>
+      </div>
+      <div class="grid gap-4">
+        {blog.map((p) => <PostCard entry={p} href={`${basePath}/blog/${p.slug}`} />)}
+      </div>
+    </section>
+  </div>
+</BaseLayout>

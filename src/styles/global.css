@@ -1,0 +1,341 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Cosmic background ---- */
+:root {
+  --bg0: #050615;
+  --bg1: #0b0e2a;
+  --glass: rgba(255,255,255,0.06);
+  --glass2: rgba(255,255,255,0.10);
+  --stroke: rgba(255,255,255,0.12);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.68);
+  --accent: rgba(124,58,237,1);
+  --accent2: rgba(34,211,238,1);
+}
+
+html, body {
+  height: 100%;
+  background:
+    radial-gradient(1200px 900px at 15% 5%, rgba(28,155,255,0.20), transparent 60%),
+    radial-gradient(900px 700px at 80% 10%, rgba(255,122,90,0.16), transparent 55%),
+    radial-gradient(900px 700px at 40% 85%, rgba(124,58,237,0.16), transparent 60%),
+    linear-gradient(180deg, #050612, #0a0f2a);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--text);
+}
+
+body {
+  position: relative;
+  z-index: 0;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+body::before, body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+}
+
+body::before {
+  /* Starfield + faint orbit rings */
+  width: 2px;
+  height: 2px;
+  background: transparent;
+  background-image:
+    radial-gradient(900px 400px at 20% 75%, rgba(255,255,255,0.06), transparent 60%),
+    radial-gradient(700px 420px at 70% 70%, rgba(255,255,255,0.05), transparent 60%),
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.7), transparent 40%),
+    radial-gradient(1px 1px at 20% 80%, rgba(255,255,255,0.6), transparent 40%),
+    radial-gradient(1px 1px at 60% 30%, rgba(255,255,255,0.6), transparent 40%),
+    radial-gradient(1px 1px at 80% 70%, rgba(255,255,255,0.7), transparent 40%),
+    radial-gradient(1px 1px at 40% 55%, rgba(255,255,255,0.55), transparent 40%),
+    radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,0.45), transparent 40%),
+    radial-gradient(1px 1px at 35% 10%, rgba(255,255,255,0.45), transparent 40%),
+    radial-gradient(1px 1px at 55% 85%, rgba(255,255,255,0.55), transparent 40%);
+  opacity: 1;
+  animation: twinkle 2.2s ease-in-out infinite;
+}
+
+body::after {
+  /* Aurora + drifting light */
+  z-index: -1;
+  background:
+    radial-gradient(600px 420px at 15% 15%, rgba(64,214,255,0.20), transparent 60%),
+    radial-gradient(700px 500px at 85% 20%, rgba(255,110,110,0.16), transparent 60%),
+    radial-gradient(800px 600px at 55% 80%, rgba(124,58,237,0.18), transparent 60%),
+    radial-gradient(900px 700px at 35% 55%, rgba(56,189,248,0.14), transparent 65%);
+  opacity: 0.6;
+  filter: blur(10px) saturate(1.2);
+  animation: aurora-drift 18s ease-in-out infinite;
+}
+
+/* Extra twinkle layer */
+body::before {
+  box-shadow:
+    8vw 12vh 0 0 rgba(255,255,255,0.7),
+    18vw 32vh 0 0 rgba(255,255,255,0.5),
+    28vw 22vh 0 0 rgba(255,255,255,0.6),
+    36vw 12vh 0 0 rgba(255,255,255,0.7),
+    48vw 18vh 0 0 rgba(255,255,255,0.5),
+    58vw 34vh 0 0 rgba(255,255,255,0.6),
+    62vw 52vh 0 0 rgba(255,255,255,0.7),
+    72vw 42vh 0 0 rgba(255,255,255,0.55),
+    82vw 16vh 0 0 rgba(255,255,255,0.65),
+    12vw 62vh 0 0 rgba(255,255,255,0.5),
+    22vw 72vh 0 0 rgba(255,255,255,0.65),
+    42vw 78vh 0 0 rgba(255,255,255,0.55),
+    68vw 82vh 0 0 rgba(255,255,255,0.6),
+    88vw 68vh 0 0 rgba(255,255,255,0.5);
+}
+
+/* Solar system ornament */
+.cosmic-system {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.75;
+  filter: saturate(1.1);
+}
+
+.cosmic-system .sun {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  left: -60px;
+  top: -40px;
+  background:
+    radial-gradient(circle at 35% 35%, #fff7cc, #ffb347 45%, rgba(255,180,70,0.0) 70%);
+  box-shadow: 0 0 120px rgba(255,196,100,0.35), 0 0 220px rgba(255,120,60,0.25);
+  animation: pulse-sun 8s ease-in-out infinite;
+}
+
+.cosmic-system .planet,
+.cosmic-system .asteroid {
+  position: absolute;
+  border-radius: 999px;
+  box-shadow: 0 0 25px rgba(255,255,255,0.06);
+  transform: translateZ(0);
+}
+
+.cosmic-system .planet::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.06);
+}
+
+.cosmic-system .planet::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.0) 55%);
+  mix-blend-mode: screen;
+}
+
+.cosmic-system .mercury {
+  width: 10px;
+  height: 10px;
+  left: 18%;
+  top: 20%;
+  background: radial-gradient(circle at 30% 30%, #cfd6e3, #7f8a98 60%);
+  animation: orbit-1 36s linear infinite;
+}
+.cosmic-system .venus {
+  width: 14px;
+  height: 14px;
+  left: 26%;
+  top: 30%;
+  background: radial-gradient(circle at 30% 30%, #f2d2a6, #b77f47 60%);
+  animation: orbit-2 44s linear infinite;
+}
+.cosmic-system .earth {
+  width: 20px;
+  height: 20px;
+  left: 28%;
+  top: 54%;
+  background:
+    radial-gradient(circle at 35% 30%, #6dd5ff, #2b6df6 60%),
+    radial-gradient(circle at 70% 60%, rgba(120,255,180,0.7), transparent 55%);
+  box-shadow: 0 0 18px rgba(74,163,255,0.6);
+  animation: orbit-3 52s linear infinite;
+}
+.cosmic-system .earth::after {
+  inset: -4px;
+}
+.cosmic-system .earth::before {
+  inset: 3px;
+}
+.cosmic-system .earth .moon {
+  display: none;
+}
+.cosmic-system .mars {
+  width: 12px;
+  height: 12px;
+  left: 38%;
+  top: 40%;
+  background: radial-gradient(circle at 30% 30%, #ff9a7a, #b24a34 60%);
+  animation: orbit-2 60s linear infinite;
+}
+.cosmic-system .jupiter {
+  width: 30px;
+  height: 30px;
+  left: 62%;
+  top: 28%;
+  background:
+    linear-gradient(135deg, #d7c0a2, #b58d6d 50%, #e0cdb5 90%);
+  animation: orbit-4 70s linear infinite;
+}
+.cosmic-system .jupiter::before {
+  inset: 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 70%);
+}
+.cosmic-system .saturn {
+  width: 26px;
+  height: 26px;
+  left: 70%;
+  top: 55%;
+  background: radial-gradient(circle at 35% 30%, #f0e1b6, #c2a371 60%);
+  animation: orbit-3 80s linear infinite;
+}
+.cosmic-system .saturn::before {
+  content: '';
+  position: absolute;
+  width: 46px;
+  height: 18px;
+  left: -10px;
+  top: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 0 14px rgba(255,255,255,0.15);
+  transform: rotate(-15deg);
+}
+.cosmic-system .uranus {
+  width: 18px;
+  height: 18px;
+  left: 82%;
+  top: 22%;
+  background: radial-gradient(circle at 30% 30%, #c4f6ff, #6eb9c4 60%);
+  animation: orbit-4 90s linear infinite;
+}
+.cosmic-system .neptune {
+  width: 18px;
+  height: 18px;
+  left: 86%;
+  top: 68%;
+  background: radial-gradient(circle at 30% 30%, #77a2ff, #2c3d8f 60%);
+  animation: orbit-2 100s linear infinite;
+}
+
+.cosmic-system .asteroid { width: 6px; height: 6px; background: #c1c7d0; opacity: 0.8; }
+.cosmic-system .a1 { left: 45%; top: 18%; animation: drift-1 28s ease-in-out infinite; }
+.cosmic-system .a2 { left: 52%; top: 80%; animation: drift-2 34s ease-in-out infinite; }
+.cosmic-system .a3 { left: 15%; top: 70%; animation: drift-3 30s ease-in-out infinite; }
+
+@keyframes pulse-sun {
+  0% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.85; }
+}
+
+@keyframes orbit-1 { 0% { transform: translate(0,0); } 50% { transform: translate(10px, -6px); } 100% { transform: translate(0,0); } }
+@keyframes orbit-2 { 0% { transform: translate(0,0); } 50% { transform: translate(-12px, 8px); } 100% { transform: translate(0,0); } }
+@keyframes orbit-3 { 0% { transform: translate(0,0); } 50% { transform: translate(8px, 12px); } 100% { transform: translate(0,0); } }
+@keyframes orbit-4 { 0% { transform: translate(0,0); } 50% { transform: translate(-10px, -10px); } 100% { transform: translate(0,0); } }
+@keyframes drift-1 { 0% { transform: translate(0,0); } 50% { transform: translate(30px, 10px); } 100% { transform: translate(0,0); } }
+@keyframes drift-2 { 0% { transform: translate(0,0); } 50% { transform: translate(-20px, -14px); } 100% { transform: translate(0,0); } }
+@keyframes drift-3 { 0% { transform: translate(0,0); } 50% { transform: translate(18px, -18px); } 100% { transform: translate(0,0); } }
+
+@keyframes aurora-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2%, -1.5%, 0) scale(1.03); }
+  100% { transform: translate3d(-2%, 1%, 0) scale(1.01); }
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.35; }
+  50% { opacity: 1; }
+  100% { opacity: 0.35; }
+}
+
+a { color: inherit; }
+
+/* Glass utility */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow, 0 20px 60px rgba(0,0,0,0.35));
+}
+
+/* Prose tweaks */
+.prose {
+  --tw-prose-body: rgba(255,255,255,0.84);
+  --tw-prose-headings: rgba(255,255,255,0.95);
+  --tw-prose-links: rgba(255,255,255,0.92);
+  --tw-prose-bold: rgba(255,255,255,0.95);
+  --tw-prose-counters: rgba(255,255,255,0.70);
+  --tw-prose-bullets: rgba(255,255,255,0.70);
+  --tw-prose-hr: rgba(255,255,255,0.14);
+  --tw-prose-quotes: rgba(255,255,255,0.92);
+  --tw-prose-quote-borders: rgba(255,255,255,0.18);
+  --tw-prose-captions: rgba(255,255,255,0.65);
+  --tw-prose-code: rgba(255,255,255,0.90);
+  --tw-prose-pre-code: rgba(255,255,255,0.90);
+  --tw-prose-pre-bg: rgba(0,0,0,0.30);
+  --tw-prose-th-borders: rgba(255,255,255,0.15);
+  --tw-prose-td-borders: rgba(255,255,255,0.12);
+}
+
+.prose :not(pre) > code {
+  color: #ff5a5a;
+  font-weight: 700;
+  background: transparent;
+}
+
+.prose :not(pre) > code::before,
+.prose :not(pre) > code::after {
+  content: '';
+}
+
+.prose pre {
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+}
+
+/* Code copy button injected by JS */
+.code-copy-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.9);
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+.code-copy-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(0,0,0,0.5);
+  border-color: rgba(255,255,255,0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

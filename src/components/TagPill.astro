@@ -1,0 +1,27 @@
+---
+import { slugifyTag } from '@/lib/utils';
+
+const { tag, hrefBase = '/tags/', link = true } = Astro.props;
+
+const raw = typeof tag === 'string' ? tag.trim() : '';
+const slug = raw ? slugifyTag(raw) : '';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+{
+  raw && (
+    link ? (
+      <a
+        class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75 hover:bg-white/10 hover:text-white"
+        href={`${base}${hrefBase}${slug}`}
+      >
+        #{raw}
+      </a>
+    ) : (
+      <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
+        #{raw}
+      </span>
+    )
+  )
+}

@@ -1,0 +1,29 @@
+{
+  "name": "ctf-cosmic-blog",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.0.3",
+    "@astrojs/rss": "^4.0.1",
+    "@astrojs/sitemap": "^3.2.2",
+    "@astrojs/tailwind": "^6.0.0",
+    "@notionhq/client": "^2.2.15",
+    "astro": "^5.1.1",
+    "notion-to-md": "^3.1.4",
+    "reading-time": "^1.5.0",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^3.4.16"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
+    "prettier": "^3.4.2",
+    "prettier-plugin-astro": "^0.14.1"
+  }
+}

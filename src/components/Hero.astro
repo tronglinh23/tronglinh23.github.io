@@ -1,0 +1,87 @@
+---
+import AnimatedButton from '@/components/ui/AnimatedButton.astro';
+import { basePath } from '@/lib/base';
+---
+
+<section
+  class="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 p-7 shadow-glass md:p-10"
+>
+  <div
+    class="absolute inset-0 opacity-80"
+    style="
+      background:
+        radial-gradient(900px 420px at 10% 10%, rgba(124,58,237,0.32), transparent 60%),
+        radial-gradient(800px 420px at 70% 30%, rgba(34,211,238,0.20), transparent 60%),
+        radial-gradient(900px 520px at 50% 120%, rgba(59,130,246,0.14), transparent 60%);
+    "
+  >
+  </div>
+
+  <div class="relative grid gap-8 md:grid-cols-2 md:items-center">
+    <div>
+      <div
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70"
+      >
+        <span
+          class="h-2 w-2 rounded-full bg-white/70"
+          style="box-shadow: 0 0 16px rgba(124,58,237,0.7)"></span>
+        logbook online
+      </div>
+
+      <h1 class="mt-4 text-3xl font-semibold tracking-tight text-white/95 md:text-4xl">
+        CTF notes in a
+        <span class="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent"
+          >cosmic</span
+        >
+        interface.
+      </h1>
+
+      <p class="mt-4 max-w-xl text-white/70">
+        CTF posts, research notes, and curated links — optimized for reading, searching, and
+        shipping to GitHub Pages. Astronaut vibes, terminal clarity.
+      </p>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <AnimatedButton href={`${basePath}/blog`} label="Read posts" />
+        <a
+          class="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white"
+          href={`${basePath}/links`}
+        >
+          Research links →
+        </a>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-2 text-xs text-white/55">
+        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Web</span>
+        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Pwn</span>
+        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Rev</span>
+        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Crypto</span>
+      </div>
+    </div>
+
+    <div class="relative">
+      <div class="absolute -inset-6 rounded-[2.5rem] bg-white/5 blur-2xl"></div>
+      <div class="relative rounded-[2.5rem] border border-white/10 bg-black/25 p-7">
+        <div class="flex items-center justify-between">
+          <div class="text-xs text-white/60">mission status</div>
+          <div class="text-xs text-white/50">v1.0</div>
+        </div>
+
+        <div class="mt-4 flex items-center gap-4">
+          <img class="h-16 w-16 animate-floaty" src={`${basePath}/astronaut.svg`} alt="astronaut" />
+          <div>
+            <div class="text-lg font-semibold text-white/90">Astronaut Console</div>
+            <div class="text-sm text-white/60">search → read → publish → repeat</div>
+          </div>
+        </div>
+
+        <div
+          class="mt-6 rounded-3xl border border-white/10 bg-black/25 p-4 font-mono text-sm text-white/85"
+        >
+          <div class="text-white/55">$ whoami</div>
+          <div class="mt-2">v1ncent</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
