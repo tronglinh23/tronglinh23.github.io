@@ -26,13 +26,30 @@ import { basePath } from '@/lib/base';
       <AnimatedButton href={`${basePath}/blog`} label="Explore" />
     </nav>
 
-    <div class="md:hidden">
-      <a
-        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
-        href={`${basePath}/blog`}
+    <details class="relative md:hidden">
+      <summary
+        class="list-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
       >
         Menu →
-      </a>
-    </div>
+      </summary>
+      <div
+        class="absolute right-0 mt-3 w-48 rounded-2xl border border-white/10 bg-black/60 p-2 shadow-glass backdrop-blur-xl"
+      >
+        {site.nav.map((item) => (
+          <a
+            class="block rounded-xl px-3 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white"
+            href={`${basePath}${item.href}`}
+          >
+            {item.label}
+          </a>
+        ))}
+        <a
+          class="mt-1 block rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
+          href={`${basePath}/blog`}
+        >
+          Explore →
+        </a>
+      </div>
+    </details>
   </div>
 </header>

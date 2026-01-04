@@ -344,6 +344,37 @@ a { color: inherit; }
   box-shadow: 0 12px 35px rgba(0,0,0,0.35);
 }
 
+/* Prevent content overflow inside prose cards */
+.prose {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.prose img,
+.prose video,
+.prose iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose pre,
+.prose code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Code copy button injected by JS */
 .code-copy-btn {
   position: absolute;
