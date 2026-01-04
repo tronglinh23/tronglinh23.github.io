@@ -7,7 +7,7 @@ const base = z.object({
   updated: z.date().optional(),
   tags: z.array(z.string()).default([]),
   category: z
-    .enum(['web', 'pwn', 'crypto', 'rev', 'forensics', 'misc', 'research', 'general'])
+    .enum(['web', 'pwn', 'crypto', 'rev', 'for', 'misc', 'research', 'general'])
     .default('general'),
   difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
   ctf_event: z.string().optional(),
