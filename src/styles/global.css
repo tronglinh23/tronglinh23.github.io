@@ -15,8 +15,14 @@
   --accent2: rgba(34,211,238,1);
 }
 
+html {
+  background-color: #050612;
+  overscroll-behavior-y: none;
+}
+
 html, body {
   height: 100%;
+  background-color: #050612;
   background:
     radial-gradient(1200px 900px at 15% 5%, rgba(28,155,255,0.20), transparent 60%),
     radial-gradient(900px 700px at 80% 10%, rgba(255,122,90,0.16), transparent 55%),
@@ -30,6 +36,9 @@ html, body {
 body {
   position: relative;
   z-index: 0;
+  overscroll-behavior: none;
+  overflow-x: hidden;
+  min-height: 100dvh;
 }
 
 body > * {
