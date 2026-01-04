@@ -18,7 +18,7 @@ const totalPages = page.lastPage;
 const currentPage = page.currentPage;
 const pageHref = (n) => (n === 1 ? `${basePath}/blog` : `${basePath}/blog/${n}`);
 
-const items = buildSearchItems(pagePosts, basePath);
+const items = buildSearchItems(await getBlogPosts(), basePath);
 ---
 
 <BaseLayout title={`Blog · Page ${currentPage}`} description="CTF writeups, research notes, and longer-form posts.">
