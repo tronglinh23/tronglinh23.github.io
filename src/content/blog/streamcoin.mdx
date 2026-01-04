@@ -1,17 +1,19 @@
 ---
 title: Streamcoin
-description: 'Created: July 14, 2024 1:28 PM'
-date: 2026-01-03
+description: ''
 tags:
   - writeup
+  - xss
+  - jwt
+  - request-smuggling
+  - file-upload
 category: web
 draft: false
 ctf_event: HTB
+date: 2024-07-14
 ---
 
 import Callout from '@/components/mdx/Callout.astro';
-
-Created: July 14, 2024 1:28 PM
 
 <Callout type="note" title="Note">
 💡 JWT bypass jku
@@ -111,7 +113,6 @@ print('[~] Forged cookie : %s' % encCookie)
 
 - XSS store in svg file
   - Viết check cơ bản thử alert, fetch()
-
   ```python
   <?xml version="1.0" standalone="no"?>
   <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -123,7 +124,6 @@ print('[~] Forged cookie : %s' % encCookie)
     </script>
   </svg>
   ```
-
 - Giờ ý tưởng dùng request smuggle vào api/test-ui với quyền admin và ip: 127.0.0.1 từ đó thực hiện xss, fetch api đến couchdb port 5984 như RESTAPI để truy vấn lấy flag
 - Final payload
 
@@ -189,7 +189,7 @@ conn.interactive()
 
 - Thành công lấy flag
 
-![Untitled](/uploads/streamcoin/Streamcoin/Untitled.png)
+![Untitled](/uploads/streamcoin/streamcoin/untitled.png)
 
 # Reference
 

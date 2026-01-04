@@ -2,25 +2,16 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import SearchAndFilters from '@/components/SearchAndFilters.astro';
 import PostCard from '@/components/PostCard.astro';
-import { getCollection } from 'astro:content';
-import { formatDate } from '@/lib/utils';
 import { basePath } from '@/lib/base';
+import { buildSearchItems, getBlogPosts } from '@/lib/collections';
 
-const posts = (await getCollection('blog'))
-  .filter((p) => !p.data.draft)
-  .sort((a, b) => b.data.date - a.data.date);
+const posts = await getBlogPosts();
 
-const items = posts.map((p) => ({
-  title: p.data.title,
-  description: p.data.description,
-  date: p.data.date.toISOString(),
-  dateLabel: formatDate(p.data.date),
-  href: `${basePath}/blog/${p.slug}`,
-  tags: p.data.tags ?? [],
-  category: p.data.category,
-  difficulty: p.data.difficulty,
-  ctf_event: p.data.ctf_event,
-}));
+const pageSize = 10;
+const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+const pagePosts = posts.slice(0, pageSize);
+
+const items = buildSearchItems(pagePosts, basePath);
 ---
 
 <BaseLayout title="Blog" description="CTF writeups, research notes, and longer-form posts.">
@@ -32,6 +23,20 @@ const items = posts.map((p) => ({
   <SearchAndFilters items={items} />
 
   <div id="results" class="mt-6 grid gap-4">
-    {posts.map((p) => <PostCard entry={p} href={`${basePath}/blog/${p.slug}`} />)}
+    {pagePosts.map((p) => <PostCard entry={p} href={`${basePath}/blog/${p.slug}`} />)}
   </div>
+
+  {
+    totalPages > 1 && (
+      <nav class="mt-8 flex items-center justify-between text-sm text-white/70">
+        <span>Page 1 of {totalPages}</span>
+        <a
+          class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+          href={`${basePath}/blog/2`}
+        >
+          Next →
+        </a>
+      </nav>
+    )
+  }
 </BaseLayout>

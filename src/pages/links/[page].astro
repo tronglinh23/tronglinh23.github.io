@@ -1,0 +1,58 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { basePath } from '@/lib/base';
+import LinkCard from '@/components/LinkCard.astro';
+import { getLinkPosts } from '@/lib/collections';
+
+export async function getStaticPaths({ paginate }) {
+  const pageSize = 10;
+  const links = await getLinkPosts();
+
+  return paginate(links, { pageSize });
+}
+
+const { page } = Astro.props;
+const pageLinks = page.data;
+const totalPages = page.lastPage;
+const currentPage = page.currentPage;
+const pageHref = (n) => (n === 1 ? `${basePath}/links` : `${basePath}/links/${n}`);
+---
+
+<BaseLayout title={`Research · Page ${currentPage}`} description="Curated articles, papers, and references from around the web.">
+  <div class="mb-6">
+    <h1 class="text-3xl font-semibold text-white/95">Research</h1>
+    <p class="mt-2 text-white/70">
+      Curated articles, research notes, and references. Think of this as your reading radar.
+    </p>
+  </div>
+
+  <div class="grid gap-4">
+    {pageLinks.map((p) => <LinkCard entry={p} />)}
+  </div>
+
+  {
+    totalPages > 1 && (
+      <nav class="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/70">
+        <span>Page {currentPage} of {totalPages}</span>
+        <div class="flex flex-wrap gap-2">
+          {currentPage > 1 && (
+            <a
+              class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+              href={pageHref(currentPage - 1)}
+            >
+              ← Prev
+            </a>
+          )}
+          {currentPage < totalPages && (
+            <a
+              class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+              href={pageHref(currentPage + 1)}
+            >
+              Next →
+            </a>
+          )}
+        </div>
+      </nav>
+    )
+  }
+</BaseLayout>

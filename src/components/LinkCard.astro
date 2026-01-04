@@ -1,0 +1,26 @@
+---
+import TagPill from '@/components/TagPill.astro';
+import { formatDate } from '@/lib/utils';
+
+const { entry } = Astro.props;
+const data = entry.data;
+---
+
+<a
+  href={data.source_url}
+  target="_blank"
+  rel="noreferrer"
+  class="block rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glass transition hover:border-white/20 hover:bg-white/10"
+>
+  <div class="text-sm text-white/55">{formatDate(data.date)} · {data.category}</div>
+  <h3 class="mt-2 text-lg font-semibold text-white/90">{data.title}</h3>
+  <p class="mt-2 text-sm text-white/70">{data.description}</p>
+  {
+    (data.tags ?? []).length > 0 && (
+      <div class="mt-4 flex flex-wrap gap-2">
+        {(data.tags ?? []).slice(0, 8).map((t) => <TagPill tag={t} link={false} />)}
+      </div>
+    )
+  }
+  <div class="mt-4 text-sm text-white/70">Open ↗</div>
+</a>

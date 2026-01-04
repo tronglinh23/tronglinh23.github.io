@@ -1,14 +1,13 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PostCard from '@/components/PostCard.astro';
-import { getCollection } from 'astro:content';
+import LinkCard from '@/components/LinkCard.astro';
 import { slugifyTag } from '@/lib/utils';
 import { basePath } from '@/lib/base';
-import { formatDate } from '@/lib/utils';
+import { getBlogPosts, getLinkPosts, sortByDateAndMtime } from '@/lib/collections';
 
 export async function getStaticPaths() {
-  const collections = ['blog', 'links'] as const;
-  const all = (await Promise.all(collections.map((c) => getCollection(c)))).flat().filter((p) => !p.data.draft);
+  const all = [...(await getBlogPosts()), ...(await getLinkPosts())];
   const tags = new Set();
   for (const p of all) {
     for (const t of p.data.tags ?? []) tags.add(slugifyTag(t));
@@ -17,11 +16,10 @@ export async function getStaticPaths() {
 }
 
 const { tag } = Astro.params;
-const collections = ['blog', 'links'] as const;
-const all = (await Promise.all(collections.map((c) => getCollection(c)))).flat().filter((p) => !p.data.draft);
+const all = [...(await getBlogPosts()), ...(await getLinkPosts())];
 
 const matches = all.filter((p) => (p.data.tags ?? []).some((t) => slugifyTag(t) === tag))
-  .sort((a, b) => b.data.date - a.data.date);
+  .sort(sortByDateAndMtime);
 
 const human = matches.length ? (matches[0].data.tags ?? []).find((t) => slugifyTag(t) === tag) : tag;
 ---
@@ -34,21 +32,7 @@ const human = matches.length ? (matches[0].data.tags ?? []).find((t) => slugifyT
 
   <div class="grid gap-4">
     {matches.map((p) => {
-      if (p.collection === 'links') {
-        return (
-          <a
-            href={p.data.source_url}
-            target="_blank"
-            rel="noreferrer"
-            class="block rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glass transition hover:border-white/20 hover:bg-white/10"
-          >
-            <div class="text-sm text-white/55">{formatDate(p.data.date)} · {p.data.category}</div>
-            <h3 class="mt-2 text-lg font-semibold text-white/90">{p.data.title}</h3>
-            <p class="mt-2 text-sm text-white/70">{p.data.description}</p>
-            <div class="mt-4 text-sm text-white/70">Open ↗</div>
-          </a>
-        );
-      }
+      if (p.collection === 'links') return <LinkCard entry={p} />;
 
       const href = `${basePath}/blog/${p.slug}`;
       return <PostCard entry={p} href={href} />;

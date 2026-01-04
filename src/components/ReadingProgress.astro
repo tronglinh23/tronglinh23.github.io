@@ -6,6 +6,7 @@
   (function () {
     const bar = document.getElementById('rp');
     if (!bar) return;
+    // Map scroll position to a percentage width.
     const onScroll = () => {
       const h = document.documentElement;
       const scrolled = h.scrollTop;

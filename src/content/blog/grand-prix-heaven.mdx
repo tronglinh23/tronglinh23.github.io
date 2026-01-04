@@ -1,0 +1,85 @@
+---
+title: GRAND PRIX HEAVEN
+description: ''
+tags:
+  - writeup
+  - xss
+  - csp
+  - file-upload
+category: web
+draft: false
+date: 2023-07-04
+ctf_event: Googlectf2024
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Done
+
+## Summary
+
+<Callout type="note" title="Note">
+💡
+
+</Callout>
+
+## Description
+
+## Analyst
+
+- Bài này có lỗ hổng XSS ở file mediaparser. Tuy nhiên file này k được gọi trong các template do đó ta cần tìm cách để gọi được template này
+
+```python
+app.get("/fave/:GrandPrixHeaven", async (req, res) => {
+  const grandPrix = await Configuration.findOne({
+    where: { public_id: req.params.GrandPrixHeaven },
+  });
+  if (!grandPrix) return res.status(400).json({ error: "ERROR: ID not found" });
+  let defaultData = {
+    0: "csp",
+    1: "retrieve",
+    2: "apiparser",
+    3: "head_end",
+    4: "faves",
+    5: "footer",
+  };
+```
+
+- ở đây ta k gọi đc media parser tuy nhiên ta có giá trị custom có thể thay đổi đoạn này. Đoạn check giá trị custom như sau
+
+![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled.png)
+
+- Ở đây ta có thể bypass được parseInt() khi truyền vào 1 string bắt đầu bằng số. Thêm nữa khi needle nhận vào needleBody thì có set multipart và boundary mà boundary ta đã biết.
+  ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-1.png)
+- Từ đó ta nghĩ đến ý tưởng chèn mediaparser vào giá trị k như sau :
+
+```python
+1_--GP_HEAVENmediaparser--GP_HEAVEN
+```
+
+- Từ đó ta có thể gọi đc mediaparser
+- Thêm 1 bước nữa ở file mediaparser có gọi đến class Requester hàm này từ file retriev.js
+
+![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-2.png)
+
+![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-3.png)
+
+- Mục tiêu của ta là cần makerequest trả về res là file jpeg tuy nhiên this.url đc set mặc định /api/get-car do đó trả về theo dạng json.
+- Ý tưởng của ta làm cách nào url fetch được đến /media/img_id thì sẽ trả về ảnh. Mà ở đọan clean url ở trên phần regexp có thể bypass được do set [A-z] mà kphai [A-Za-z] do đó có 1 số các ký tự ở giữa ta vẫn có thể sử dụng
+
+![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-4.png)
+
+- Ta có thể sử dụng \, mà backslash khi đc set trong url sẽ tự chuyển thành forwardslash và có thể điều hướng đc sang media
+- Từ đó ta thành công trigger
+
+```python
+https://grandprixheaven-web.2024.ctfcompetition.com/fave/3Pg8TkzJ6ifVyONPKTmNI?F1=\media\ttTE6KozICvAd5-jghfzN
+```
+
+- Tạo 1 file ảnh exiftool với payload xss và up lên sau đó gửi url cho bot ta thành công lấy được flag
+
+![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-5.png)
+
+## Exploit
+
+## Result

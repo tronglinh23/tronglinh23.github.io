@@ -1,12 +1,16 @@
 ---
 title: Fancy
 description: 'Status: Done'
-date: 2026-01-03
 tags:
-  - RCE
+  - writeup
+  - rce
+  - lfi
+  - file-upload
+  - deserialization
 category: web
-ctf_event: SEKAICTF 2025
 draft: false
+ctf_event: Sekaictf2025
+date: 2026-01-03
 ---
 
 import Callout from '@/components/mdx/Callout.astro';
@@ -91,6 +95,8 @@ private function resetSecurityProperties() {
 The minimal PHP generator below creates the exact chain; it sets up attributes so `WP_HTML_Tag_Processor->__toString()` takes the code path that constructs a `WP_Block`, then the registry, then `get_content($filePath)`.
 
 ```php
+<?php
+
 <?php
 
 /**

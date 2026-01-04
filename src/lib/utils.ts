@@ -10,3 +10,14 @@ export function slugifyTag(tag: string) {
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9\-]/g, '');
 }
+
+export function getEntryMtime(entry: { id: string; collection: string }) {
+  try {
+    const filePath = path.join(process.cwd(), 'src', 'content', entry.collection, entry.id);
+    return fs.statSync(filePath).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+import fs from 'node:fs';
+import path from 'node:path';

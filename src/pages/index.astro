@@ -2,13 +2,10 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Hero from '@/components/Hero.astro';
 import PostCard from '@/components/PostCard.astro';
-import { getCollection } from 'astro:content';
 import { basePath } from '@/lib/base';
+import { getBlogPosts } from '@/lib/collections';
 
-const blog = (await getCollection('blog'))
-  .filter((p) => !p.data.draft)
-  .sort((a, b) => b.data.date - a.data.date)
-  .slice(0, 3);
+const blog = (await getBlogPosts()).slice(0, 3);
 ---
 
 <BaseLayout title="Home">

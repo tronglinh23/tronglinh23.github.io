@@ -1,15 +1,14 @@
 import rss from '@astrojs/rss';
-import { getCollection } from 'astro:content';
+import { getBlogPosts } from '@/lib/collections';
 
 export async function GET(context) {
-  const blog = (await getCollection('blog')).filter((p) => !p.data.draft);
-
+  const blog = await getBlogPosts();
   const items = blog.map((p) => ({
     title: p.data.title,
     pubDate: p.data.date,
     description: p.data.description,
     link: `${context.site}${context.base}/blog/${p.slug}`
-  })).sort((a,b)=>b.pubDate - a.pubDate);
+  }));
 
   return rss({
     title: 'Logbook',

