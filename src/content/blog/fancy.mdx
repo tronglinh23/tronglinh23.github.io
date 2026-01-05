@@ -20,13 +20,13 @@ Status: Done
 ## Summary
 
 <Callout type="note" title="Note">
-💡 **POP CHAIN GADGET TO RCE** Bug = user-controlled `unserialize()` in the Fancy plugin → during `__wakeup()` it calls `in_array($tag, $safeTags)` on **attacker-supplied** `$tag`. Because `$tag` can be an **object**, `in_array` (non-strict) coerces it to **string** → triggers `__toString()` on a core WP class → **WordPress POP chain** reaches a file-load sink and yields **LFI/Include → RCE/Flag**.
+💡 **POP chain → RCE**. Bug: user-controlled `unserialize()` in the Fancy plugin → during `__wakeup()` it calls `in_array($tag, $safeTags)` on **attacker-supplied** `$tag`. Because `$tag` can be an **object**, `in_array` (non-strict) coerces it to **string** → triggers `__toString()` on a core WP class → **WordPress POP chain** reaches a file-load sink and yields **LFI/Include → RCE/Flag**.
 
 </Callout>
 
 ## Description
 
-- [https://wpscan.com/blog/finding-a-rce-gadget-chain-in-wordpress-core](https://wpscan.com/blog/finding-a-rce-gadget-chain-in-wordpress-core/)/
+- https://wpscan.com/blog/finding-a-rce-gadget-chain-in-wordpress-core
 - [https://sec.vnpt.vn/2025/06/Mot-vai-note-ve-Wordpress-POP-chain](https://sec.vnpt.vn/2025/06/Mot-vai-note-ve-Wordpress-POP-chain)
 - https://github.com/WordPress/WordPress/blob/master/wp-includes/html-api/class-wp-html-tag-processor.php#L2326
 
@@ -95,8 +95,6 @@ private function resetSecurityProperties() {
 The minimal PHP generator below creates the exact chain; it sets up attributes so `WP_HTML_Tag_Processor->__toString()` takes the code path that constructs a `WP_Block`, then the registry, then `get_content($filePath)`.
 
 ```php
-<?php
-
 <?php
 
 /**
@@ -182,9 +180,8 @@ namespace {
 Usage:
 
 ```bash
-php solve.php "payload transfer to include "         # sanity read
-# or: php make.php /flag.txt > payload.b64     # the flag path in the challenge
-
+php solve.php "/etc/passwd"              # sanity read
+# or: php make.php /flag.txt > payload.b64  # the flag path in the challenge
 ```
 
 - Filter chain php payload

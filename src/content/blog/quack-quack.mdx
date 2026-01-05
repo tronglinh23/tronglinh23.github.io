@@ -119,17 +119,14 @@ Here’s a tight write-up you can paste into your notes/blog.
 So we want:
 
 ```
-
 p + 0x20 = (&canary) + 1
 ```
 
 But `p = buf1 + k` (k = where your "Quack Quack " begins), and `&canary = buf1 + 0x78`. Solve for `k`:
 
 ```
-
 (buf1 + k) + 0x20 = (buf1 + 0x78) + 1
 k = 0x78 + 1 - 0x20 = 0x59
-
 ```
 
 **Result:** put `"Quack Quack "` at **offset `0x59`** inside `buf1`.

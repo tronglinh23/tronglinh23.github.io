@@ -19,7 +19,7 @@ Status: Done
 ## Summary
 
 <Callout type="note" title="Note">
-💡
+💡 Bypass template routing to reach `mediaparser`, then abuse EXIF XSS.
 
 </Callout>
 
@@ -27,9 +27,9 @@ Status: Done
 
 ## Analyst
 
-- Bài này có lỗ hổng XSS ở file mediaparser. Tuy nhiên file này k được gọi trong các template do đó ta cần tìm cách để gọi được template này
+- Bài này có lỗ hổng XSS ở file `mediaparser`. Tuy nhiên file này không được gọi trong các template nên ta cần tìm cách để gọi được template này.
 
-```python
+```js
 app.get("/fave/:GrandPrixHeaven", async (req, res) => {
   const grandPrix = await Configuration.findOne({
     where: { public_id: req.params.GrandPrixHeaven },
@@ -45,38 +45,39 @@ app.get("/fave/:GrandPrixHeaven", async (req, res) => {
   };
 ```
 
-- ở đây ta k gọi đc media parser tuy nhiên ta có giá trị custom có thể thay đổi đoạn này. Đoạn check giá trị custom như sau
+- Ở đây ta không gọi được `mediaparser` nhưng ta có giá trị `custom` có thể thay đổi đoạn này. Đoạn check giá trị `custom` như sau:
 
 ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled.png)
 
-- Ở đây ta có thể bypass được parseInt() khi truyền vào 1 string bắt đầu bằng số. Thêm nữa khi needle nhận vào needleBody thì có set multipart và boundary mà boundary ta đã biết.
+- Ở đây ta có thể bypass được `parseInt()` khi truyền vào 1 string bắt đầu bằng số. Thêm nữa khi `needle` nhận vào `needleBody` thì có set multipart và boundary mà boundary ta đã biết.
+
   ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-1.png)
-- Từ đó ta nghĩ đến ý tưởng chèn mediaparser vào giá trị k như sau :
+- Từ đó ta nghĩ đến ý tưởng chèn `mediaparser` vào giá trị `k` như sau:
 
 ```python
 1_--GP_HEAVENmediaparser--GP_HEAVEN
 ```
 
-- Từ đó ta có thể gọi đc mediaparser
-- Thêm 1 bước nữa ở file mediaparser có gọi đến class Requester hàm này từ file retriev.js
+- Từ đó ta có thể gọi được `mediaparser`.
+- Thêm 1 bước nữa, ở file `mediaparser` có gọi đến class `Requester` (hàm này từ file `retriev.js`).
 
 ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-2.png)
 
 ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-3.png)
 
-- Mục tiêu của ta là cần makerequest trả về res là file jpeg tuy nhiên this.url đc set mặc định /api/get-car do đó trả về theo dạng json.
-- Ý tưởng của ta làm cách nào url fetch được đến /media/img_id thì sẽ trả về ảnh. Mà ở đọan clean url ở trên phần regexp có thể bypass được do set [A-z] mà kphai [A-Za-z] do đó có 1 số các ký tự ở giữa ta vẫn có thể sử dụng
+- Mục tiêu của ta là cần `makeRequest` trả về response là file JPEG, tuy nhiên `this.url` được set mặc định `/api/get-car` nên trả về JSON.
+- Ý tưởng: làm sao để URL fetch được đến `/media/img_id` thì sẽ trả về ảnh. Ở đoạn clean URL, regex dùng `[A-z]` (không phải `[A-Za-z]`) nên có thể bypass vì có các ký tự ở giữa vẫn dùng được.
 
 ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-4.png)
 
-- Ta có thể sử dụng \, mà backslash khi đc set trong url sẽ tự chuyển thành forwardslash và có thể điều hướng đc sang media
-- Từ đó ta thành công trigger
+- Ta có thể sử dụng `\`, vì backslash khi được set trong URL sẽ tự chuyển thành forward slash và có thể điều hướng sang media.
+- Từ đó ta thành công trigger:
 
 ```python
 https://grandprixheaven-web.2024.ctfcompetition.com/fave/3Pg8TkzJ6ifVyONPKTmNI?F1=\media\ttTE6KozICvAd5-jghfzN
 ```
 
-- Tạo 1 file ảnh exiftool với payload xss và up lên sau đó gửi url cho bot ta thành công lấy được flag
+- Tạo 1 file ảnh bằng exiftool với payload XSS và upload lên, sau đó gửi URL cho bot là lấy được flag.
 
 ![Untitled](/uploads/grand-prix-heaven/grand-prix-heaven/untitled-5.png)
 
