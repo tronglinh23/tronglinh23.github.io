@@ -2,6 +2,10 @@
 
 A static, GitHub-Pages-friendly personal site for CTF posts, research notes, and link posts — with a cosmic/astronaut theme.
 
+If you want to find older challenge writeups that were written before this website existed, check the Notion workspace:
+
+`https://xon1l.notion.site/0f7cc27a1426404e9383b15583584137?v=b53480fa8c5241b6b2577c0cb42da2e5&pvs=74`
+
 ## Quick start
 
 ```bash
