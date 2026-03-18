@@ -1,0 +1,426 @@
+---
+title: SU_forensics
+description: 'SUCTF 2026 forensics writeup for the AD1 image challenge.'
+date: 2026-03-17
+tags:
+  - writeup
+  - suctf2026
+  - forensics
+  - ad1
+  - windows
+category: for
+ctf_event: SUCTF2026
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Description
+
+Misc
+
+During a raid on a cross-border telecom fraud gang, police apprehended a suspect. At the moment of arrest, he was editing a "secret rule" in a new tab of Windows Notepad. The page was blank, indicating unsaved changes. When police entered, he quickly pressed a few keys, seemingly deleting crucial content. As a forensic expert, we are providing you with the system disk image file of this host.
+
+Please answer the following questions:
+
+1. When was the device last shut down? Please provide your answer in UTC+8 timezone. (`YYYY/MM/DDTHH:MM:SS`)
+2. The MD5 hash (32-bit lowercase) of the deleted content in Notepad.
+3. What is the first key?
+4. The session ID and time used to obtain the second key. Please provide your answer in UTC+8 timezone. Time format: `YYYY/MM/DDTHH:MM:SS`. Connect the two answers with an underscore.
+5. The content of the final usable key.
+6. The time for the Ollama client's `no such host` message. Format: `YYYY/MM/DDTHH:MM:SS`.
+7. To ensure the local model outputs a key in a fixed format, the suspect obtained this prompt in a specific session. Please provide the message ID that obtained this prompt.
+
+Flag format:
+
+```text
+SUCTF{MD5(Question 1 answer_Question 2 answer_Question 3 answer_Question 4 answer_Question 5 answer_Question 6 answer_Question 7 answer)}
+```
+
+Attachment links:
+
+- `https://pan.baidu.com/s/1849zGD9qAdkasyNr_PxA9A?pwd=p37w`
+- `https://drive.google.com/file/d/1sZwII74wi5SyD3dqb7gjzXj0d-_Osps8/view?usp=drive_link`
+
+Attachment SHA256:
+
+```text
+C41FA5EA694328EC34CE2E4A00E35EFF24747A31E9D6C2DDFE3FC38DACB89EE3
+```
+
+## Summary
+
+This challenge gives an AD1 forensic image, `abc.ad1`, packed inside `abc.7z`. The workflow is straightforward:
+
+1. Verify the archive hash.
+2. List the AD1 contents.
+3. Extract the interesting artifacts.
+4. Reconstruct seven answers from Windows registry, Notepad tab-state, uTools clipboard, Ollama logs, and Cherry Studio IndexedDB.
+
+I used two small helper scripts during the solve.
+
+```python
+from pyad1 import AD1
+import sys
+
+def walk(item, prefix=""):
+    name = item.name
+    path = f"{prefix}/{name}" if prefix else name
+    print(path)
+    for child in item.children:
+        walk(child, path)
+
+ad1 = AD1(sys.argv[1])
+for root in ad1.root_items:
+    walk(root)
+```
+
+```python
+from pyad1 import AD1
+from pathlib import Path
+import sys
+
+def walk_extract(item, outdir, prefix=""):
+    name = item.name
+    rel = f"{prefix}/{name}" if prefix else name
+    dst = Path(outdir) / rel
+
+    if item.is_file:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with open(dst, "wb") as f:
+            f.write(item.read())
+    else:
+        dst.mkdir(parents=True, exist_ok=True)
+        for child in item.children:
+            walk_extract(child, outdir, rel)
+
+ad1 = AD1(sys.argv[1])
+outdir = sys.argv[2] if len(sys.argv) > 2 else "extracted_ad1"
+for root in ad1.root_items:
+    walk_extract(root, outdir)
+```
+
+Typical workflow:
+
+```bash
+python3 ad1_list.py abc.ad1 > ad1_paths.tsv
+python3 ad1_extract.py abc.ad1
+```
+
+Useful local files from the solve:
+
+- `ad1_list.py`
+- `ad1_extract.py`
+- `ad1_paths.tsv`
+
+## Final Answers
+
+1. `2026/03/05T17:23:06`
+2. `c1c4c50f51afc97a58385457af43e169`
+3. `zQt$d3!GIS9l.aR@7ELN`
+4. `019cbe60-6803-70fe-8ab5-e0035399980f_2026/03/05T22:25:24`
+5. `zQt$d3!GIS9l.aR@7ELNA9!fK2@pL4#tM6$wN8%yR1^uD3&hJ5*Z17727207244dE23eFgH7kLmNpOqRstUvWxYz012345678901234567890123456789`
+6. `2026/03/05T21:58:17`
+7. `40854344-3f6e-4464-a07f-b39d42f5adc5`
+
+## Q1
+
+Question:
+
+> When was the device last shut down? Please provide your answer in UTC+8 timezone. (`YYYY/MM/DDTHH:MM:SS`)
+
+Original artifact in AD1:
+
+```text
+Windows\System32\config\SYSTEM
+```
+
+Extracted file used:
+
+```text
+extracted_SYSTEM
+```
+
+Method:
+
+- Read registry key `ControlSet001\Control\Windows`.
+- Parse the `ShutdownTime` value.
+- It decodes to `2026-03-05 09:23:06 UTC`.
+- Convert it to `UTC+8`.
+
+Answer:
+
+```text
+2026/03/05T17:23:06
+```
+
+## Q2
+
+Question:
+
+> The MD5 hash (32-bit lowercase) of the deleted content in Notepad.
+
+Original artifact in AD1:
+
+```text
+Users\Administrator\AppData\Local\Packages\Microsoft.WindowsNotepad_8wekyb3d8bbwe\LocalState\TabState\992f.bin
+```
+
+Extracted files used:
+
+- `notepad_992f.bin`
+- `extracted_tabstate`
+
+Method:
+
+- This is the Notepad tab-state artifact for an unsaved tab.
+- Reconstruct the pre-deletion text from the tab snapshots and deltas.
+- The recovered note is essentially:
+
+```text
+Key Instructions:
+1.Key must not be entirely stored on disk.
+2.The key has four parts
+3.Key usage requires reshuffling order: 1-4-3-2
+4.Content needs to be randomized using AI.
+```
+
+- Compute the MD5 of the deleted content.
+
+Answer:
+
+```text
+c1c4c50f51afc97a58385457af43e169
+```
+
+## Q3
+
+Question:
+
+> What is the first key?
+
+This answer comes from uTools clipboard history, not from the visible Ollama example output.
+
+Original artifacts in AD1:
+
+- `Users\Administrator\AppData\Roaming\uTools\clipboard-data\...`
+- `Users\Administrator\AppData\Local\Programs\utools\resources\app.asar`
+- `Windows\System32\config\SOFTWARE`
+
+Extracted files used:
+
+- `utools_clip_1772700955558.bin`
+- `utools_clip_1772701170720.bin`
+- `utools_app.asar`
+- `win32-x64.node`
+- `extracted_SOFTWARE`
+
+How to decrypt the uTools clipboard:
+
+1. Reverse `utools_app.asar` and `win32-x64.node`.
+2. Find the clipboard encryption logic:
+
+```jsx
+createCipheriv('aes-256-cbc', getLocalSecretKey(), 'UTOOLS0123456789');
+```
+
+3. Recover `MachineGuid` from `SOFTWARE`:
+
+```text
+dfa96070-797f-4b50-bb3e-d478d5c44179
+```
+
+4. Recover the native salts from `win32-x64.node`:
+
+```text
+H22`OB~6i{A{TXqIqPEg
+|Wea6ywQQ`1q>_QyY2f1
+```
+
+5. Compute:
+
+```text
+MD5("H22`OB~6i{A{TXqIqPEg" + MachineGuid + "|Wea6ywQQ`1q>_QyY2f1")
+= 5a569f2670ad9d9765df113e1417083f
+```
+
+6. Use `AES-256-CBC`, key = ASCII string `5a569f2670ad9d9765df113e1417083f`, IV = `UTOOLS0123456789`.
+7. Each line in the clipboard files is hex-encoded ciphertext, so decrypt with `bytes.fromhex(line)`.
+
+Recovered plaintext from `utools_clip_1772700955558.bin`:
+
+- `zQt$d3!GIS9l.aR@7ELN`
+- `A9!fK2@pL4#tM6$wN8%yR1^uD3&hJ5*Z`
+- Note and rule fragments
+
+The accepted first key is:
+
+```text
+zQt$d3!GIS9l.aR@7ELN
+```
+
+## Q4
+
+Question:
+
+> The session ID and time used to obtain the second key. Please provide your answer in UTC+8 timezone. Time format: `YYYY/MM/DDTHH:MM:SS`. Connect the two answers with an underscore.
+
+Original artifacts in AD1:
+
+- `Users\Administrator\AppData\Local\Ollama\db.sqlite`
+- `Users\Administrator\AppData\Local\Ollama\ollama_app.log`
+- `Users\Administrator\AppData\Local\Ollama\ollama_server.log`
+
+Extracted files used:
+
+- `db.sqlite`
+- `messages_dump.txt`
+- `ollama_app.log`
+- `ollama_server.log`
+
+Method:
+
+- Inspect chat `019cbe60-6803-70fe-8ab5-e0035399980f`.
+- In `messages_dump.txt`, this chat contains the request for an `openssl rand` example and the assistant example key.
+- The challenge asks for the session ID and the time the second key was obtained.
+- The correct time comes from the corresponding server or app log activity for that chat, not the earlier message creation time.
+
+Answer:
+
+```text
+019cbe60-6803-70fe-8ab5-e0035399980f_2026/03/05T22:25:24
+```
+
+## Q5
+
+Question:
+
+> The content of the final usable key.
+
+This is the assembly question.
+
+What we already know:
+
+- From Notepad: the order is `1-4-3-2`.
+- From the uTools clipboard:
+  - `key1 = zQt$d3!GIS9l.aR@7ELN`
+  - `key4 = A9!fK2@pL4#tM6$wN8%yR1^uD3&hJ5*Z`
+  - Clue copied in the clipboard: `第三密钥为第二密钥生成时间的时间戳`
+- From Ollama chat `019cbe60-6803-70fe-8ab5-e0035399980f`:
+  - Assistant example output:
+
+```text
+4dE23eFgH7kLmNpOqRstUvWxYz012345678901234567890123456789
+```
+
+This is `key2`.
+
+Now build `key3`:
+
+- Q4 time is `2026/03/05T22:25:24 UTC+8`.
+- Convert it to Unix timestamp seconds.
+- Result: `1772720724`.
+
+Assemble in `1-4-3-2` order:
+
+```text
+key1 + key4 + key3 + key2
+```
+
+Final Q5:
+
+```text
+zQt$d3!GIS9l.aR@7ELNA9!fK2@pL4#tM6$wN8%yR1^uD3&hJ5*Z17727207244dE23eFgH7kLmNpOqRstUvWxYz012345678901234567890123456789
+```
+
+## Q6
+
+Question:
+
+> The time for the Ollama client's `no such host` message. Format: `YYYY/MM/DDTHH:MM:SS`.
+
+Original artifact in AD1:
+
+```text
+Users\Administrator\AppData\Local\Ollama\ollama_app.log
+```
+
+Extracted file used:
+
+```text
+ollama_app.log
+```
+
+Method:
+
+Find the `no such host` line:
+
+```text
+time=2026-03-05T21:58:17.244+08:00 ... lookup ollama.com: no such host
+```
+
+Truncate to seconds.
+
+Answer:
+
+```text
+2026/03/05T21:58:17
+```
+
+## Q7
+
+Question:
+
+> To ensure the local model outputs a key in a fixed format, the suspect obtained this prompt in a specific session. Please provide the message ID that obtained this prompt.
+
+Original artifact in AD1:
+
+Cherry Studio IndexedDB LevelDB under the user profile, then parse the recovered IndexedDB records.
+
+Extracted files used:
+
+- `cherry_all.jsonl`
+- `cherry_topic.jsonl`
+
+Method:
+
+- Parse the Cherry IndexedDB LevelDB records.
+- Locate topic `bef7324a-9e11-4e23-a19f-624f662a92c8`.
+- Find the assistant message that provides the fixed-format prompt for generating keys.
+- The correct message ID is:
+
+```text
+40854344-3f6e-4464-a07f-b39d42f5adc5
+```
+
+Answer:
+
+```text
+40854344-3f6e-4464-a07f-b39d42f5adc5
+```
+
+## Final Flag
+
+Flag format:
+
+```text
+SUCTF{MD5(Q1_Q2_Q3_Q4_Q5_Q6_Q7)}
+```
+
+Concatenated string:
+
+```text
+2026/03/05T17:23:06_c1c4c50f51afc97a58385457af43e169_zQt$d3!GIS9l.aR@7ELN_019cbe60-6803-70fe-8ab5-e0035399980f_2026/03/05T22:25:24_zQt$d3!GIS9l.aR@7ELNA9!fK2@pL4#tM6$wN8%yR1^uD3&hJ5*Z17727207244dE23eFgH7kLmNpOqRstUvWxYz012345678901234567890123456789_2026/03/05T21:58:17_40854344-3f6e-4464-a07f-b39d42f5adc5
+```
+
+MD5:
+
+```text
+39e850db5d740c54df4281e39fb3866d
+```
+
+<Callout type="note" title="Flag">
+```text
+SUCTF{39e850db5d740c54df4281e39fb3866d}
+```
+</Callout>
