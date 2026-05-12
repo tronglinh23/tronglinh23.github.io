@@ -1,0 +1,367 @@
+---
+title: SIEM Analysis Using Splunk BOTS v1
+description: 'SIEM analysis report converted from PDF to MDX format.'
+date: 2026-05-12
+tags:
+  - siem
+  - splunk
+  - botsv1
+  - security-operations
+category: for
+draft: false
+---
+
+## Question 101
+
+**Question:** What is the likely IPv4 address of someone from the Po1s0n1vy group scanning imreallynotbatman.com for web application vulnerabilities?
+
+**Answer:** `40.80.148.42`
+
+### Splunk Query
+
+```spl
+index="botsv1" imreallynotbatman.com source="stream:http" | top src_ip
+```
+
+### Notes
+
+- `index="botsv1"`: search only the `botsv1` dataset.
+- `imreallynotbatman.com`: keep events that mention this domain.
+- `source="stream:http"`: restrict to HTTP logs collected by Splunk Stream.
+- `top src_ip`: ranks the most common source IPs. The top IP is most likely the scanner.
+
+### Screenshots
+
+![Page 2 Image 1](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-02-img-001.png)
+![Page 2 Image 2](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-02-img-002.png)
+
+## Question 102
+
+**Question:** What company created the web vulnerability scanner used by Po1s0n1vy? Type the company name.
+
+**Answer:** `Acunetix`
+
+### Splunk Query
+
+```spl
+index="botsv1" imreallynotbatman.com source="stream:http" src_ip="40.80.148.42"
+```
+
+### Notes
+
+- `src_ip="40.80.148.42"` reuses the scanner IP from Question 101.
+- Reviewing request headers (`src_headers`) identifies the scanner software as Acunetix.
+
+### Screenshots
+
+![Page 3 Image 3](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-03-img-003.png)
+![Page 3 Image 4](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-03-img-004.png)
+
+## Question 103
+
+**Question:** What content management system is imreallynotbatman.com likely using?
+
+**Answer:** `Joomla`
+
+### Splunk Query
+
+```spl
+index="botsv1" imreallynotbatman.com source="stream:http" src_ip="40.80.148.42"
+```
+
+### Notes
+
+The CMS was identified from CMS-specific request paths and signatures in web traffic.
+
+### Screenshots
+
+![Page 4 Image 5](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-04-img-005.png)
+![Page 4 Image 6](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-04-img-006.png)
+![Page 4 Image 7](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-04-img-007.png)
+
+## Question 104
+
+**Question:** What is the name of the file that defaced the imreallynotbatman.com website? Please submit only the name of the file with extension?
+
+**Answer:** `poisonivy-is-coming-for-you-batman.jpeg`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http src_ip=192.168.250.70 | table src_headers, site
+```
+
+### Notes
+
+The defacement filename appears in request path / related HTTP log fields.
+
+### Screenshots
+
+![Page 5 Image 8](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-05-img-008.png)
+![Page 5 Image 9](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-05-img-009.png)
+
+## Question 105
+
+**Question:** This attack used dynamic DNS to resolve to the malicious IP. What fully qualified domain name (FQDN) is associated with this attack?
+
+**Answer:** `prankglassinebracket.jumpingcrab.com`
+
+### Notes
+
+The FQDN was identified from the same defacement-related traffic used in Question 104.
+
+### Screenshots
+
+![Page 6 Image 10](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-06-img-010.png)
+
+## Question 106
+
+**Question:** What IPv4 address has Po1s0n1vy tied to domains that are pre-staged to attack Wayne Enterprises?
+
+**Answer:** `23.22.63.114`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http src_ip=192.168.250.70 "/poisonivy-is-coming-for-you-batman.jpeg"
+```
+
+### Notes
+
+This traces the defacement file request to identify the destination IP tied to malicious pre-staged domains.
+
+### Screenshots
+
+![Page 7 Image 11](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-07-img-011.png)
+![Page 7 Image 12](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-07-img-012.png)
+
+## Question 108
+
+**Question:** What IPv4 address is likely attempting a brute force password attack against imreallynotbatman.com?
+
+**Answer:** `23.22.63.114`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST | stats count by src_ip, form_data
+```
+
+### Notes
+
+High volume POST attempts with form data indicate brute-force behavior.
+
+### Screenshots
+
+![Page 8 Image 13](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-08-img-013.png)
+![Page 8 Image 14](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-08-img-014.png)
+
+## Question 109
+
+**Question:** What is the name of the executable uploaded by Po1s0n1vy?
+
+**Answer:** `3791.exe`
+
+### Splunk Query
+
+```spl
+index="botsv1" imreallynotbatman.com sourcetype="fgt_utm" .exe virus
+```
+
+### Notes
+
+UTM logs reveal malware transfer details including the uploaded executable name.
+
+### Screenshots
+
+![Page 9 Image 15](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-09-img-015.png)
+![Page 9 Image 16](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-09-img-016.png)
+
+## Question 110
+
+**Question:** What is the MD5 hash of the executable uploaded?
+
+**Answer:** `aae3f5a29935e6abcc2c2754d12a9af0`
+
+### Notes
+
+Used file checksum context and VirusTotal lookup to confirm MD5.
+
+### Screenshots
+
+![Page 10 Image 17](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-10-img-017.png)
+![Page 10 Image 18](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-10-img-018.png)
+![Page 10 Image 19](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-10-img-019.png)
+
+## Question 111
+
+**Question:** GCPD reported that common TTPs (Tactics, Techniques, Procedures) for the Po1s0n1vy APT group, if initial compromise fails, is to send a spear phishing email with custom malware attached to their intended target. This malware is usually connected to Po1s0n1vys initial attack infrastructure. Using research techniques, provide the SHA256 hash of this malware.
+
+**Answer:** `9709473ab351387aab9e816eff3910b9f28a7a70202e250ed46dba8f820f34a8`
+
+### Notes
+
+- Pivoted on attacker infrastructure IP: `23.22.63.114`.
+- In VirusTotal relations (communicating/referring files), the candidate was `MirandaTateScreensaver.scr.exe`.
+- Copied the file SHA256 from its details page.
+
+### Screenshots
+
+![Page 11 Image 20](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-11-img-020.png)
+![Page 12 Image 21](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-12-img-021.png)
+![Page 12 Image 22](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-12-img-022.png)
+
+## Question 112
+
+**Question:** What special hex code is associated with the customized malware discussed in question 111?
+
+**Answer:** `53 74 65 76 65 20 42 72 61 6e 74 27 73 20 42 65 61 72 64 20 69 73 20 61 20 70 6f 77 65 72 66 75 6c 20 74 68 69 6e 67 2e 20 46 69 6e 64 20 74 68 69 73 20 6d 65 73 73 61 67 65 20 61 6e 64 20 61 73 6b 20 68 69 6d 20 74 6f 20 62 75 79 20 79 6f 75 20 61 20 62 65 65 72 21 21 21`
+
+### Notes
+
+Hex string was taken from malware discussion/details context in VirusTotal.
+
+### Screenshots
+
+![Page 13 Image 23](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-13-img-023.png)
+![Page 13 Image 24](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-13-img-024.png)
+
+## Question 114
+
+**Question:** What was the first brute force password used?
+
+**Answer:** `12345678`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | sort _time | where password != "" | table password, _time
+```
+
+### Notes
+
+- Extracted `passwd` from `form_data`, sorted by time, and took the first non-empty attempt.
+
+### Screenshots
+
+![Page 14 Image 25](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-14-img-025.png)
+![Page 15 Image 26](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-15-img-026.png)
+
+## Question 115
+
+**Question:** One of the passwords in the brute force attack is James Brodsky's favorite Coldplay song. We are looking for a six character word on this one. Which is it?
+
+**Answer:** `yellow`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | search password IN (Yellow, Clocks, Shiver, Sparks, Oceans) | table password, _time
+```
+
+### Notes
+
+- Filtered extracted passwords against six-letter Coldplay candidates.
+
+### Screenshots
+
+![Page 16 Image 27](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-16-img-027.png)
+![Page 16 Image 28](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-16-img-028.png)
+![Page 16 Image 29](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-16-img-029.png)
+
+## Question 116
+
+**Question:** What was the correct password for admin access to the content management system running "imreallynotbatman.com"?
+
+**Answer:** `batman`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | stats count by password | table password, count
+```
+
+### Notes
+
+- Counted submitted passwords and identified the credential that matched successful admin access behavior.
+
+### Screenshots
+
+![Page 17 Image 30](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-17-img-030.png)
+![Page 17 Image 31](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-17-img-031.png)
+
+## Question 117
+
+**Question:** What was the average password length used in the password brute forcing attempt?
+
+**Answer:** `6`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | eval leng_password=len(password) | stats avg(leng_password)
+```
+
+### Notes
+
+- Calculated per-password length with `eval`, then averaged with `stats avg(...)`.
+- Splunk refs: `https://help.splunk.com/en/splunk-cloud-platform/spl-search-reference/10.1.2507/statistical-and-charting-functions/aggregate-functions`
+- Splunk refs: `https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/9.3/search-commands/eval`
+
+### Screenshots
+
+![Page 18 Image 32](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-18-img-032.png)
+![Page 18 Image 33](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-18-img-033.png)
+
+## Question 118
+
+**Question:** How many seconds elapsed between the time the brute force password scan identified the correct password and the compromised login?
+
+**Answer:** `92.17`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | transaction password | table duration
+
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST form_data=*passwd*batman*
+| rex field=form_data "passwd=(?<password>[^&]+)" | transaction password | table duration
+```
+
+### Notes
+
+- Used `transaction password` on the duplicated `batman` attempts and read `duration`.
+
+### Screenshots
+
+![Page 19 Image 34](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-19-img-034.png)
+![Page 19 Image 35](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-19-img-035.png)
+![Page 20 Image 36](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-20-img-036.png)
+
+## Question 119
+
+**Question:** How many unique passwords were attempted in the brute force attempt?
+
+**Answer:** `412`
+
+### Splunk Query
+
+```spl
+index=botsv1 sourcetype=stream:http dest_ip=192.168.250.70 http_method=POST
+| rex field=form_data "passwd=(?<password>[^&]+)" | dedup password | stats count(password)
+```
+
+### Notes
+
+- Deduplicated password attempts and counted unique values.
+- Splunk ref: `http://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.2/search-commands/dedup`
+
+### Screenshots
+
+![Page 21 Image 37](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-21-img-037.png)
+![Page 21 Image 38](/uploads/siem-analysis-using-splunk-bots-v1/siem-analysis-using-splunk-bots-v1/page-21-img-038.png)
