@@ -1,0 +1,51 @@
+---
+title: AWS Storage + IAM Foundation
+description: 'Phase 1 notes: S3, IAM, account ID discovery, CloudTrail investigation, and exposure risks in EBS/RDS.'
+date: 2026-05-17
+tags:
+  - aws
+  - cloud-security
+  - s3
+  - iam
+  - cloudtrail
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 1 — AWS Storage + IAM Foundation
+
+<Callout type="note" title="Phase Summary">
+Completed **6 labs** (**4 Red / 2 Blue**) focused on AWS storage and identity attack paths, plus defensive investigation with CloudTrail.
+</Callout>
+
+This phase built my core cloud security foundations around **S3**, **IAM**, **AWS account ID discovery**, **public resource exposure**, and **CloudTrail triage**.
+
+## Learning Objectives
+
+- Understand how attackers enumerate S3 and identify misconfigurations.
+- Learn why AWS account IDs can be useful for further cloud reconnaissance.
+- Practice IAM enumeration to map identities, permissions, and blast radius.
+- Investigate suspicious cloud activity using CloudTrail logs.
+- Assess data exposure risk from public EBS snapshots and internet-facing RDS.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | Type | Summary |
+| --- | --- | --- | --- |
+| 1 | [AWS S3 Enumeration Basics](https://pwnedlabs.io/labs/aws-s3-enumeration-basics) | 🔴 Red | Enumerate S3 buckets, test access controls, and list objects to establish an initial foothold. |
+| 2 | [Identify the AWS Account ID from a Public S3 Bucket](https://pwnedlabs.io/labs/identify-the-aws-account-id-from-a-public-s3-bucket) | 🔴 Red | Derive an AWS account ID from a public S3 bucket and use it to expand reconnaissance paths. |
+| 3 | [Intro to AWS IAM Enumeration](https://pwnedlabs.io/labs/intro-to-aws-iam-enumeration) | 🔵 Blue | Use AWS CLI to enumerate IAM users, roles, groups, policies, and effective permissions. |
+| 4 | [Breach in the Cloud](https://pwnedlabs.io/labs/breach-in-the-cloud) | 🔵 Blue | Analyze CloudTrail logs to identify suspicious S3/IAM behavior and triage a cloud breach. |
+| 5 | [Loot Public EBS Snapshots](https://pwnedlabs.io/labs/loot-public-ebs-snapshots) | 🔴 Red | Assess how public EBS snapshots can expose sensitive data to unauthorized access. |
+| 6 | [Pillage Exposed RDS Instances](https://pwnedlabs.io/labs/pillage-exposed-rds-instances) | 🔴 Red | Evaluate the risk of publicly accessible RDS instances and resulting database exposure. |
+
+## Core Lessons from Phase 1
+
+1. **S3 exposure is a frequent starting point** for both reconnaissance and sensitive data discovery.
+2. **AWS account ID is low-sensitivity but high-utility** when chained with IAM-focused enumeration.
+3. **IAM is the control plane of cloud risk**, and permission mapping is key to understanding blast radius.
+4. **CloudTrail provides critical detection and response telemetry** for cloud incident investigations.
+5. **Public EBS snapshots and exposed RDS services** can create severe, direct data leak paths.
