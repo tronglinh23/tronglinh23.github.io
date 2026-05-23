@@ -1,0 +1,52 @@
+---
+title: Web-to-Cloud Attack Chains
+description: 'Phase 2 notes: chaining web vulnerabilities into AWS credential theft, secret discovery, and cloud resource compromise.'
+date: 2026-05-23
+tags:
+  - aws
+  - cloud-security
+  - web
+  - ssrf
+  - path-traversal
+  - secrets
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 2 — Web-to-Cloud Attack Chains
+
+<Callout type="note" title="Phase Summary">
+Completed **6 Red Team labs** focused on chaining web-layer weaknesses into cloud credential compromise and AWS data access.
+</Callout>
+
+This phase is especially useful because it directly connects **web pentesting** with **cloud security operations**.
+
+## Learning Objectives
+
+- Chain web vulnerabilities into cloud access paths.
+- Understand how temporary or leaked credentials are obtained and abused.
+- Practice secret discovery across repositories, build artifacts, and container images.
+- Learn practical impact: pivoting from initial web access into AWS resource compromise.
+- Build stronger detection and prevention mindset for web-to-cloud attack chains.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | <span style="white-space: nowrap; display: inline-block; min-width: 4.5rem;">Type</span> | Summary |
+| --- | --- | --- | --- |
+| 7 | [SSRF to Pwned](https://pwnedlabs.io/labs/ssrf-to-pwned) | 🔴&nbsp;Red | SSRF against an EC2-hosted application to reach metadata service and extract temporary AWS credentials. |
+| 8 | [Path Traversal to AWS credentials to S3](https://pwnedlabs.io/labs/path-traversal-to-aws-credentials-to-s3) | 🔴&nbsp;Red | Use path traversal to recover AWS credentials, then pivot to S3 access. |
+| 9 | [Hunt for Secrets in Git Repos](https://pwnedlabs.io/labs/hunt-for-secrets-in-git-repos) | 🔴&nbsp;Red | Identify leaked credentials and sensitive tokens in Git repositories. |
+| 10 | [Uncover Secrets in CodeCommit and Docker](https://pwnedlabs.io/labs/uncover-secrets-in-codecommit-and-docker) | 🔴&nbsp;Red | Discover exposed credentials stored in AWS CodeCommit history and Docker images. |
+| 11 | [Leverage Leaked Credentials for Pwnage](https://pwnedlabs.io/labs/leverage-leaked-credentials-for-pwnage) | 🔴&nbsp;Red | Operationalize leaked secrets to access cloud resources and extract sensitive data. |
+| 12 | [Access Secrets with S3 Bucket Versioning](https://pwnedlabs.io/labs/access-secrets-with-s3-bucket-versioning) | 🔴&nbsp;Red | Use S3 object versioning to recover historical secrets and plaintext sensitive fields. |
+
+## Key Knowledge After Phase 2
+
+1. **Web bugs can become cloud compromise vectors** when they expose metadata services, local files, or credentials.
+2. **Credential exposure is the core pivot point** across repos, containers, and misconfigured storage.
+3. **Temporary credentials are still dangerous** if not tightly scoped and monitored.
+4. **Attack chains matter more than single findings**, because small web issues can escalate into full cloud impact.
+5. **Prevention requires layered controls**: secure coding, secret hygiene, least privilege IAM, and continuous monitoring.
