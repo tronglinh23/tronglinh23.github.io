@@ -1,5 +1,6 @@
 import rss from '@astrojs/rss';
 import { getBlogPosts } from '@/lib/collections';
+import { blogPath } from '@/lib/utils';
 
 export async function GET(context) {
   const blog = await getBlogPosts();
@@ -7,7 +8,7 @@ export async function GET(context) {
     title: p.data.title,
     pubDate: p.data.date,
     description: p.data.description,
-    link: `${context.site}${context.base}/blog/${p.slug}`
+    link: blogPath(p),
   }));
 
   return rss({

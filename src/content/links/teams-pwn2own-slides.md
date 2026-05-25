@@ -12,4 +12,3 @@ source_url: https://speakerdeck.com/masatokinugawa/how-i-hacked-microsoft-teams-
 draft: false
 ---
 
-A curated link post. Add your summary + key takeaways here.

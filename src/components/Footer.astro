@@ -2,22 +2,33 @@
 import { site } from '@/config/site';
 ---
 
-<footer class="border-t border-white/10 bg-black/10">
-  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 md:flex-row md:items-center md:justify-between">
-    <div class="text-sm text-white/65">
-      © {new Date().getFullYear()} {site.author.name}. Built with Astro.
+<footer class="mt-14 border-t border-white/10 bg-black/20">
+  <div
+    class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 md:flex-row md:items-center md:justify-between"
+  >
+    <div>
+      <div class="text-sm text-white/72">
+        © {new Date().getFullYear()}
+        {site.author.name}. Built with Astro.
+      </div>
+      <div class="mt-1 text-xs text-white/50">
+        Cosmic logbook for CTF and cloud security research.
+      </div>
     </div>
+
     <div class="flex flex-wrap gap-2">
-      {site.socials.map((s) => (
-        <a
-          class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
-          href={s.href}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {s.label}
-        </a>
-      ))}
+      {
+        site.socials.map((s) => (
+          <a
+            class="rounded-xl border border-white/14 bg-white/6 px-3 py-2 text-sm text-white/78 transition hover:border-white/24 hover:bg-white/12 hover:text-white"
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {s.label}
+          </a>
+        ))
+      }
     </div>
   </div>
 </footer>

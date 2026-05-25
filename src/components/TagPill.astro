@@ -10,18 +10,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 {
-  raw && (
-    link ? (
+  raw &&
+    (link ? (
       <a
-        class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75 hover:bg-white/10 hover:text-white"
+        class="inline-flex items-center rounded-full border border-white/14 bg-white/6 px-3 py-1 text-xs text-white/78 transition hover:border-white/28 hover:bg-white/12 hover:text-white"
         href={`${base}${hrefBase}${slug}`}
       >
         #{raw}
       </a>
     ) : (
-      <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
+      <span class="inline-flex items-center rounded-full border border-white/14 bg-white/6 px-3 py-1 text-xs text-white/78">
         #{raw}
       </span>
-    )
-  )
+    ))
 }

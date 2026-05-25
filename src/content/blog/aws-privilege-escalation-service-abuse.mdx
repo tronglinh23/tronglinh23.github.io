@@ -1,0 +1,53 @@
+---
+title: AWS Privilege Escalation + Service Abuse
+description: 'Phase 3 notes: privilege escalation paths, trust-policy abuse, and service-level exploitation across S3, IAM, Cognito, SQS, and Lambda.'
+date: 2026-05-25
+tags:
+  - aws
+  - cloud-security
+  - privilege-escalation
+  - iam
+  - s3
+  - cognito
+  - lambda
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 3 — AWS Privilege Escalation + Service Abuse
+
+<Callout type="note" title="Phase Summary">
+Completed **6 Red Team labs** focused on AWS privilege escalation, trust abuse, and multi-service attack paths.
+</Callout>
+
+This phase is best done after you are comfortable with **IAM enumeration** and **leaked credential workflows**.
+
+## Learning Objectives
+
+- Abuse weak S3 bucket policies to gain elevated cloud access.
+- Practice role-assumption attack paths, including trust-policy and external ID misuse.
+- Exploit service misconfigurations in Cognito, SQS, and Lambda.
+- Understand serverless attack chains and data access expansion.
+- Strengthen cloud-auth understanding with boto3, STS, S3, and Secrets Manager.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | <span style="white-space: nowrap; display: inline-block; min-width: 4.5rem;">Type</span> | Summary |
+| --- | --- | --- | --- |
+| 13 | [Exploit Weak Bucket Policies for Privileged Access](https://pwnedlabs.io/labs/exploit-weak-bucket-policies-for-privileged-access) | 🔴&nbsp;Red | Abuse overly permissive S3 bucket policies to gain privileged access paths. |
+| 14 | [S3 Bucket Brute Force to Breach](https://pwnedlabs.io/labs/s3-bucket-brute-force-to-breach) | 🔴&nbsp;Red | Discover exposed buckets with wordlists and use leaked data for lateral movement. |
+| 15 | [Assume Privileged Role with External ID](https://pwnedlabs.io/labs/assume-privileged-role-with-external-id) | 🔴&nbsp;Red | Learn role assumption mechanics and trust-policy abuse with external ID contexts. |
+| 16 | [Abuse Cognito User and Identity Pools](https://pwnedlabs.io/labs/abuse-cognito-user-and-identity-pools) | 🔴&nbsp;Red | Exploit Cognito misconfigurations to gain cloud access and pivot through Lambda workflows. |
+| 17 | [SQS and Lambda SQL Injection](https://pwnedlabs.io/labs/sqs-and-lambda-sql-injection) | 🔴&nbsp;Red | Execute serverless SQL injection paths involving SQS-triggered Lambda processing. |
+| 18 | [Understand Authentication Mechanisms Using Boto3](https://pwnedlabs.io/labs/understand-authentication-mechanisms-using-boto3) | 🔴&nbsp;Red | Build practical understanding of AWS authentication flows using Python, boto3, STS, S3, and Secrets Manager. |
+
+## Key Knowledge After Phase 3
+
+1. **Privilege escalation often starts from policy weaknesses**, not just leaked keys.
+2. **Trust relationships are high-value targets**, especially role assumption with loose external ID handling.
+3. **Service chaining increases impact**: Cognito, SQS, and Lambda can become pivot channels across accounts and data planes.
+4. **Serverless components are attack surface**, and event-driven logic can hide injection and privilege abuse.
+5. **Strong auth-flow literacy is critical** for both offense and defense when validating real AWS permission boundaries.

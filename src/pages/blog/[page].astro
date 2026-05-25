@@ -1,9 +1,11 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import SearchAndFilters from '@/components/SearchAndFilters.astro';
+import PageIntro from '@/components/PageIntro.astro';
 import PostCard from '@/components/PostCard.astro';
 import { basePath } from '@/lib/base';
 import { buildSearchItems, getBlogPosts } from '@/lib/collections';
+import { blogPath } from '@/lib/utils';
 
 export async function getStaticPaths({ paginate }) {
   const pageSize = 10;
@@ -21,26 +23,35 @@ const pageHref = (n) => (n === 1 ? `${basePath}/blog` : `${basePath}/blog/${n}`)
 const items = buildSearchItems(await getBlogPosts(), basePath);
 ---
 
-<BaseLayout title={`Blog · Page ${currentPage}`} description="CTF writeups, research notes, and longer-form posts.">
-  <div class="mb-6">
-    <h1 class="text-3xl font-semibold text-white/95">Blog</h1>
-    <p class="mt-2 text-white/70">CTF writeups, research notes, and deep dives.</p>
-  </div>
+<BaseLayout
+  title={`Blog · Page ${currentPage}`}
+  description="CTF writeups, research notes, and longer-form posts."
+>
+  <PageIntro
+    kicker="Archive"
+    title="Blog"
+    description="CTF writeups, research notes, and deep dives."
+  />
 
   <SearchAndFilters items={items} />
 
   <div id="results" class="mt-6 grid gap-4">
-    {pagePosts.map((p) => <PostCard entry={p} href={`${basePath}/blog/${p.slug}`} />)}
+    {pagePosts.map((p) => <PostCard entry={p} href={blogPath(p, basePath)} />)}
   </div>
 
   {
     totalPages > 1 && (
-      <nav class="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/70">
-        <span>Page {currentPage} of {totalPages}</span>
+      <nav
+        class="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/72"
+        data-reveal
+      >
+        <span>
+          Page {currentPage} of {totalPages}
+        </span>
         <div class="flex flex-wrap gap-2">
           {currentPage > 1 && (
             <a
-              class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+              class="rounded-2xl border border-white/14 bg-black/24 px-3 py-2 text-white/80 transition hover:border-white/24 hover:bg-white/12 hover:text-white"
               href={pageHref(currentPage - 1)}
             >
               ← Prev
@@ -48,7 +59,7 @@ const items = buildSearchItems(await getBlogPosts(), basePath);
           )}
           {currentPage < totalPages && (
             <a
-              class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+              class="rounded-2xl border border-white/14 bg-black/24 px-3 py-2 text-white/80 transition hover:border-white/24 hover:bg-white/12 hover:text-white"
               href={pageHref(currentPage + 1)}
             >
               Next →

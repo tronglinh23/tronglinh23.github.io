@@ -2,6 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { basePath } from '@/lib/base';
 import LinkCard from '@/components/LinkCard.astro';
+import PageIntro from '@/components/PageIntro.astro';
 import { getLinkPosts } from '@/lib/collections';
 
 const links = await getLinkPosts();
@@ -11,13 +12,15 @@ const totalPages = Math.max(1, Math.ceil(links.length / pageSize));
 const pageLinks = links.slice(0, pageSize);
 ---
 
-<BaseLayout title="Research" description="Curated articles, papers, and references from around the web.">
-  <div class="mb-6">
-    <h1 class="text-3xl font-semibold text-white/95">Research</h1>
-    <p class="mt-2 text-white/70">
-      Curated articles, research notes, and references. Think of this as your reading radar.
-    </p>
-  </div>
+<BaseLayout
+  title="Research"
+  description="Curated articles, papers, and references from around the web."
+>
+  <PageIntro
+    kicker="Knowledge Radar"
+    title="Research"
+    description="Curated articles, docs, and references worth revisiting."
+  />
 
   <div class="grid gap-4">
     {pageLinks.map((p) => <LinkCard entry={p} />)}
@@ -25,10 +28,10 @@ const pageLinks = links.slice(0, pageSize);
 
   {
     totalPages > 1 && (
-      <nav class="mt-8 flex items-center justify-between text-sm text-white/70">
+      <nav class="mt-8 flex items-center justify-between text-sm text-white/72" data-reveal>
         <span>Page 1 of {totalPages}</span>
         <a
-          class="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white"
+          class="rounded-2xl border border-white/14 bg-black/24 px-3 py-2 text-white/80 transition hover:border-white/24 hover:bg-white/12 hover:text-white"
           href={`${basePath}/links/2`}
         >
           Next →

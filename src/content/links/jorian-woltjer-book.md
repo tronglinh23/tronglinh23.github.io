@@ -11,4 +11,3 @@ source_url: https://book.jorianwoltjer.com/
 draft: false
 ---
 
-A curated link post. Add your summary + chapters you want to revisit.

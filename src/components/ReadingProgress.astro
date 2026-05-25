@@ -1,12 +1,20 @@
 <div class="pointer-events-none fixed left-0 top-0 z-50 h-1 w-full bg-transparent">
-  <div id="rp" class="h-full w-0 bg-white/70" style="box-shadow: 0 0 18px rgba(124,58,237,0.55)"></div>
+  <div
+    id="rp"
+    class="h-full w-0"
+    style="
+      background: linear-gradient(90deg, rgba(105, 224, 255, 0.92), rgba(141, 166, 255, 0.92), rgba(255, 176, 134, 0.92));
+      box-shadow: 0 0 18px rgba(111, 210, 255, 0.65);
+    "
+  >
+  </div>
 </div>
 
 <script>
   (function () {
     const bar = document.getElementById('rp');
     if (!bar) return;
-    // Map scroll position to a percentage width.
+
     const onScroll = () => {
       const h = document.documentElement;
       const scrolled = h.scrollTop;
@@ -14,6 +22,7 @@
       const p = max > 0 ? (scrolled / max) * 100 : 0;
       bar.style.width = p + '%';
     };
+
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
   })();

@@ -4,16 +4,22 @@ const { href = '#', label = 'Button' } = Astro.props;
 
 <a
   href={href}
-  class="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 shadow-glass transition hover:border-white/25 hover:bg-white/10"
+  class="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-sky-200/30 bg-sky-100/10 px-4 py-2 text-sm font-semibold text-sky-50 shadow-[0_14px_36px_rgba(0,0,0,0.36)] transition hover:-translate-y-0.5 hover:border-sky-100/50 hover:bg-sky-100/16"
 >
   <span
-    class="absolute inset-0 -z-10 opacity-0 transition group-hover:opacity-100"
+    class="absolute inset-0 -z-10 opacity-0 transition duration-300 group-hover:opacity-100"
     style="
-      background: radial-gradient(700px 240px at 20% 30%, rgba(124,58,237,0.35), transparent 55%),
-                  radial-gradient(520px 240px at 80% 70%, rgba(34,211,238,0.25), transparent 55%);
+      background:
+        radial-gradient(700px 280px at 18% 30%, rgba(102,217,255,0.34), transparent 56%),
+        radial-gradient(620px 260px at 82% 68%, rgba(255,165,127,0.28), transparent 54%);
     "
   ></span>
-  <span class="mr-2 inline-block h-2 w-2 rounded-full bg-white/70" style="box-shadow: 0 0 16px rgba(34,211,238,0.7)"></span>
-  <span class="translate-y-[0.5px]">{label}</span>
-  <span class="ml-2 text-white/60 transition group-hover:translate-x-0.5 group-hover:text-white/85">→</span>
+
+  <span
+    class="mr-2 inline-block h-2 w-2 rounded-full bg-sky-100"
+    style="box-shadow: 0 0 16px rgba(102,217,255,0.9)"></span>
+  <span class="translate-y-[0.2px]">{label}</span>
+  <span class="ml-2 text-sky-100/80 transition group-hover:translate-x-0.5 group-hover:text-sky-50"
+    >→</span
+  >
 </a>

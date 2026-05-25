@@ -1,0 +1,17 @@
+---
+interface Props {
+  title: string;
+  kicker?: string;
+  description?: string;
+  className?: string;
+  reveal?: boolean;
+}
+
+const { title, kicker, description, className = 'mb-6', reveal = true } = Astro.props as Props;
+---
+
+<section class={className} data-reveal={reveal ? true : undefined}>
+  {kicker && <div class="section-kicker">{kicker}</div>}
+  <h1 class="section-title mt-2 text-4xl">{title}</h1>
+  {description && <p class="section-desc mt-2">{description}</p>}
+</section>

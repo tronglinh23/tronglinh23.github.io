@@ -1,0 +1,76 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import TagPill from '@/components/TagPill.astro';
+import { entrySlug, formatDate } from '@/lib/utils';
+import { basePath } from '@/lib/base';
+import { render } from 'astro:content';
+import { getLinkPosts } from '@/lib/collections';
+
+export async function getStaticPaths() {
+  const links = await getLinkPosts();
+  return links.map((p) => ({ params: { slug: entrySlug(p) }, props: { p } }));
+}
+
+const { p } = Astro.props;
+const { Content } = await render(p);
+const resources = [
+  { label: 'Primary Resource', url: p.data.source_url },
+  ...(p.data.extra_links ?? []),
+];
+const hasNotes = (p.body ?? '').trim().length > 0;
+---
+
+<BaseLayout title={p.data.title} description={p.data.description}>
+  <article class="mx-auto max-w-4xl" data-reveal>
+    <div class="mb-8 rounded-3xl border border-white/12 bg-white/5 p-5 md:p-6">
+      <div class="text-xs tracking-wide text-white/54">
+        {formatDate(p.data.date)} · {p.data.category}
+      </div>
+      <h1 class="section-title mt-3 text-3xl leading-tight md:text-4xl">{p.data.title}</h1>
+      <p class="mt-3 text-white/72">{p.data.description}</p>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        {(p.data.tags ?? []).map((t) => <TagPill tag={t} />)}
+      </div>
+    </div>
+
+    <section class="surface-panel--strong rounded-3xl p-6 md:p-8" data-reveal>
+      <h2 class="section-title text-2xl">Links</h2>
+      <ul class="mt-4 space-y-3 text-white/80">
+        {
+          resources.map((r) => (
+            <li>
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline decoration-white/30 underline-offset-4 hover:text-white hover:decoration-white/80"
+              >
+                {r.label} ↗
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      hasNotes && (
+        <section class="mt-6 rounded-3xl border border-white/12 bg-black/25 p-6 md:p-8" data-reveal>
+          <div class="prose prose-invert max-w-none">
+            <Content />
+          </div>
+        </section>
+      )
+    }
+
+    <div
+      class="mt-8 flex items-center justify-between rounded-3xl border border-white/12 bg-white/5 p-5"
+    >
+      <a class="text-sm text-white/74 hover:text-white" href={`${basePath}/links`}
+        >← Back to research</a
+      >
+      <a class="text-sm text-white/74 hover:text-white" href={`${basePath}/`}>Home →</a>
+    </div>
+  </article>
+</BaseLayout>

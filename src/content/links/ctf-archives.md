@@ -11,4 +11,3 @@ source_url: https://github.com/sajjadium/ctf-archives
 draft: false
 ---
 
-A curated link post. Add your summary + key links.

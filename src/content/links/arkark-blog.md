@@ -11,4 +11,3 @@ source_url: https://blog.arkark.dev/
 draft: false
 ---
 
-A curated link post. Add your summary + notable articles worth revisiting.

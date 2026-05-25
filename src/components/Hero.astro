@@ -4,89 +4,92 @@ import { basePath } from '@/lib/base';
 ---
 
 <section
-  class="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 p-7 shadow-glass md:p-10"
+  class="surface-panel card-spotlight relative overflow-hidden rounded-[2rem] p-7 md:p-10"
+  data-reveal
 >
   <div
-    class="absolute inset-0 opacity-80"
+    class="pointer-events-none absolute inset-0 opacity-90"
+    data-animated="true"
     style="
       background:
-        radial-gradient(900px 420px at 10% 10%, rgba(124,58,237,0.32), transparent 60%),
-        radial-gradient(800px 420px at 70% 30%, rgba(34,211,238,0.20), transparent 60%),
-        radial-gradient(900px 520px at 50% 120%, rgba(59,130,246,0.14), transparent 60%);
+        radial-gradient(960px 460px at 8% 8%, rgba(84,190,255,0.3), transparent 60%),
+        radial-gradient(820px 420px at 82% 24%, rgba(255,150,124,0.24), transparent 60%),
+        radial-gradient(920px 560px at 42% 114%, rgba(132,118,255,0.18), transparent 62%);
     "
   >
   </div>
 
-  <div class="relative grid gap-8 md:grid-cols-2 md:items-center">
-    <div>
-      <div
-        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70"
-      >
-        <span
-          class="h-2 w-2 rounded-full bg-emerald-400"
-          style="box-shadow: 0 0 16px rgba(31, 200, 22, 0.7)"></span>
-        Active
-      </div>
+  <div class="relative grid gap-8 lg:grid-cols-[1.14fr_0.86fr] lg:items-center">
+    <div data-reveal data-reveal-delay="1">
+      <div class="section-kicker">Mission Log</div>
 
-      <h1 class="mt-4 text-3xl font-semibold tracking-tight text-white/95 md:text-4xl">
-        CTF
-        <span class="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent"
-          >writeups</span
-        >
-        and researches.
+      <h1 class="section-title mt-4 text-4xl leading-tight md:text-5xl">
+        <span class="aurora-text">CTF writeups</span>
+        and research.
       </h1>
 
-      <p class="mt-4 max-w-xl text-white/70">
-        This site stores my CTF writeups, articles and resources I want to keep handy.
+      <p class="section-desc mt-4 max-w-2xl text-base md:text-lg">
+        A focused space for exploitation notes, CTF debriefs, and practical security playbooks you
+        can reuse.
       </p>
 
-      <div class="mt-6 flex flex-wrap gap-3">
-        <AnimatedButton href={`${basePath}/blog`} label="Read posts" />
+      <div class="mt-7 flex flex-wrap gap-3">
+        <AnimatedButton href={`${basePath}/blog`} label="Read writeups" />
         <a
-          class="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white"
+          class="rounded-2xl border border-white/16 bg-black/24 px-4 py-2 text-sm text-white/80 transition hover:border-white/30 hover:bg-white/8 hover:text-white"
           href={`${basePath}/links`}
         >
-          Research links →
+          Research vault →
         </a>
       </div>
 
-      <div class="mt-6 flex flex-wrap gap-2 text-xs text-white/55">
-        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Web</span>
-        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Pwn</span>
-        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Rev</span>
-        <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1">Crypto</span>
+      <div class="mt-6 flex flex-wrap gap-2 text-xs">
+        <span class="chip">Web</span>
+        <span class="chip">Cloud</span>
+        <span class="chip">Pwn</span>
+        <span class="chip">Rev</span>
+        <span class="chip">Forensics</span>
       </div>
+
     </div>
 
-    <div class="relative">
-      <div class="absolute -inset-6 rounded-[2.5rem] bg-white/5 blur-2xl"></div>
-      <div class="relative rounded-[2.5rem] border border-white/10 bg-black/25 p-7">
+    <div data-reveal data-reveal-delay="2">
+      <div class="surface-panel--strong subtle-grid rounded-[1.7rem] p-6">
         <div class="flex items-center justify-between">
-          <div class="text-xs text-white/60">mission status</div>
-          <div class="text-xs text-white/50">v1.0</div>
+          <div class="text-xs uppercase tracking-[0.14em] text-white/62">Astronaut Console</div>
+          <div
+            class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-[10px] text-emerald-100/90"
+          >
+            active
+          </div>
         </div>
 
-        <div class="mt-4 flex items-center gap-4">
-          <img class="h-16 w-16 animate-floaty" src={`${basePath}/astronaut.svg`} alt="astronaut" />
+        <div class="mt-5 flex items-center gap-3">
+          <img
+            class="h-14 w-14 rounded-2xl border border-white/16 bg-black/30 p-2.5"
+            src={`${basePath}/astronaut.svg`}
+            alt="astronaut"
+            data-animated="true"
+          />
           <div>
-            <div class="text-lg font-semibold text-white/90">Astronaut Console</div>
-            <div class="text-sm text-white/60">search → read → publish → repeat</div>
+            <div class="text-lg font-semibold text-white/92">v1ncent</div>
+            <div class="text-sm text-white/60">search → exploit → document</div>
           </div>
         </div>
 
         <div
-          class="mt-6 rounded-3xl border border-white/10 bg-black/25 p-4 font-mono text-sm text-white/85"
+          class="mt-5 space-y-2 rounded-2xl border border-white/12 bg-black/28 p-4 font-mono text-[13px] leading-relaxed text-white/85"
         >
-          <div class="text-white/55">$ whoami</div>
-          <div class="mt-2">v1ncent</div>
-          <div class="mt-4 text-white/55">$ more writeups & links</div>
+          <div class="text-white/48">$ current_focus</div>
+          <div>aws-attack-paths && ctf-reversing</div>
+          <div class="pt-2 text-white/48">$ resources</div>
           <a
-            class="mt-2 inline-flex max-w-full break-all text-white/80 hover:text-white"
+            class="inline-flex max-w-full break-all text-white/76 hover:text-white"
             href="https://xon1l.notion.site/0f7cc27a1426404e9383b15583584137?v=b53480fa8c5241b6b2577c0cb42da2e5"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
-            https://xon1l.notion.site/0f7cc27a1426404e9383b15583584137?v=b53480fa8c5241b6b2577c0cb42da2e5
+            more labs and writeups ↗
           </a>
         </div>
       </div>

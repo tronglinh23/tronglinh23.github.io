@@ -11,4 +11,3 @@ source_url: https://docs.google.com/spreadsheets/d/1lkNJ0uQwbeC1ZTRrxdtuPLCIl7ml
 draft: false
 ---
 
-A curated link post. Add your summary + how you use the tracker for monitoring.

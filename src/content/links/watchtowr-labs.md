@@ -11,4 +11,3 @@ source_url: https://labs.watchtowr.com/
 draft: false
 ---
 
-A curated link post. Add your summary + standout posts you want to track.

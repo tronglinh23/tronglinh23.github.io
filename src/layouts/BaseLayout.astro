@@ -26,9 +26,17 @@ const pageDesc =
     <meta property="og:image" content={`${Astro.site}/og-default.png`} />
 
     <link rel="icon" href={`${basePath}/favicon.svg`} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
   </head>
   <body class="min-h-screen flex flex-col">
-    <div class="cosmic-system" aria-hidden="true">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <div class="cosmic-system" aria-hidden="true" data-animated="true">
       <span class="sun"></span>
       <span class="planet mercury"></span>
       <span class="planet venus"></span>
@@ -42,21 +50,76 @@ const pageDesc =
       <span class="asteroid a2"></span>
       <span class="asteroid a3"></span>
     </div>
+
     {!noProgress && <ReadingProgress />}
+
     <Header />
-    <main class="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 flex-1">
+
+    <main id="main-content" class="mx-auto w-full max-w-6xl px-4 pb-20 pt-10 flex-1">
       <slot />
     </main>
 
     <Footer />
 
+    <button id="toTop" type="button" aria-label="Back to top">↑</button>
+
     <script>
-      // Add copy buttons to code blocks (client-side).
-      (function () {
+      const EFFECTS_KEY = 'cosmic-effects-mode';
+
+      function readStoredMode() {
+        try {
+          const raw = localStorage.getItem(EFFECTS_KEY);
+          if (raw === 'full' || raw === 'reduced') return raw;
+          return null;
+        } catch {
+          return null;
+        }
+      }
+
+      function applyEffectsMode(mode) {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const resolved = mode === 'reduced' || (!mode && prefersReduced) ? 'reduced' : 'full';
+
+        document.documentElement.dataset.effects = resolved;
+        document.body.dataset.effects = resolved;
+
+        document.querySelectorAll('[data-effects-toggle]').forEach((button) => {
+          const btn = button;
+          const isReduced = resolved === 'reduced';
+          btn.setAttribute('aria-pressed', isReduced ? 'true' : 'false');
+          btn.textContent = isReduced ? 'Effects: Reduced' : 'Effects: Full';
+        });
+      }
+
+      function bindEffectsToggle() {
+        document.querySelectorAll('[data-effects-toggle]').forEach((button) => {
+          const btn = button;
+          if (btn.dataset.bound === '1') return;
+          btn.dataset.bound = '1';
+          btn.addEventListener('click', () => {
+            const current =
+              document.documentElement.dataset.effects === 'reduced' ? 'reduced' : 'full';
+            const next = current === 'reduced' ? 'full' : 'reduced';
+            try {
+              localStorage.setItem(EFFECTS_KEY, next);
+            } catch {
+              // Ignore localStorage failures.
+            }
+            applyEffectsMode(next);
+            initRevealOnScroll();
+          });
+        });
+      }
+
+      function initCopyButtons() {
         const pres = document.querySelectorAll('pre');
         pres.forEach((pre) => {
+          if (pre.dataset.copyReady === '1') return;
+
           const code = pre.querySelector('code');
           if (!code) return;
+
+          pre.dataset.copyReady = '1';
           pre.style.position = 'relative';
 
           const btn = document.createElement('button');
@@ -67,9 +130,9 @@ const pageDesc =
           btn.addEventListener('click', async () => {
             try {
               await navigator.clipboard.writeText(code.textContent || '');
-              btn.textContent = 'Copied ✓';
+              btn.textContent = 'Copied';
               setTimeout(() => (btn.textContent = 'Copy'), 900);
-            } catch (e) {
+            } catch {
               btn.textContent = 'Failed';
               setTimeout(() => (btn.textContent = 'Copy'), 900);
             }
@@ -77,7 +140,107 @@ const pageDesc =
 
           pre.appendChild(btn);
         });
-      })();
+      }
+
+      let revealObserver;
+      let revealFailsafeTimer;
+      function initRevealOnScroll() {
+        const root = document.documentElement;
+        const targets = Array.from(document.querySelectorAll('[data-reveal]'));
+        if (!targets.length) return;
+
+        const reduced = root.dataset.effects === 'reduced';
+        if (reduced || !('IntersectionObserver' in window)) {
+          if (revealFailsafeTimer) clearTimeout(revealFailsafeTimer);
+          delete root.dataset.revealActive;
+          targets.forEach((el) => el.classList.add('is-revealed'));
+          return;
+        }
+
+        root.dataset.revealActive = '1';
+
+        // Reveal any target already in viewport immediately to avoid hidden content on long pages.
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        targets.forEach((el) => {
+          if (el.classList.contains('is-revealed')) return;
+          const rect = el.getBoundingClientRect();
+          if (rect.bottom > 0 && rect.top < viewportHeight * 0.98) {
+            el.classList.add('is-revealed');
+          }
+        });
+
+        if (!revealObserver) {
+          revealObserver = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('is-revealed');
+                revealObserver.unobserve(entry.target);
+              });
+            },
+            { threshold: 0, rootMargin: '0px 0px -8% 0px' }
+          );
+        }
+
+        targets.forEach((el) => {
+          if (el.classList.contains('is-revealed')) return;
+          revealObserver.observe(el);
+        });
+
+        // Failsafe: ensure above-the-fold content is never left hidden.
+        if (revealFailsafeTimer) clearTimeout(revealFailsafeTimer);
+        revealFailsafeTimer = setTimeout(() => {
+          const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+          targets.forEach((el) => {
+            if (el.classList.contains('is-revealed')) return;
+            const rect = el.getBoundingClientRect();
+            if (rect.bottom > -vh * 0.2 && rect.top < vh * 1.2) {
+              el.classList.add('is-revealed');
+            }
+          });
+        }, 350);
+      }
+
+      function initBackToTop() {
+        const button = document.getElementById('toTop');
+        if (!button) return;
+
+        const onScroll = () => {
+          if (window.scrollY > 420) {
+            button.classList.add('is-visible');
+          } else {
+            button.classList.remove('is-visible');
+          }
+        };
+
+        if (button.dataset.bound !== '1') {
+          button.dataset.bound = '1';
+          button.addEventListener('click', () => {
+            const reduced = document.documentElement.dataset.effects === 'reduced';
+            window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+          });
+          window.addEventListener('scroll', onScroll, { passive: true });
+        }
+
+        onScroll();
+      }
+
+      function initPageEnhancements() {
+        applyEffectsMode(readStoredMode());
+        bindEffectsToggle();
+        initCopyButtons();
+        initRevealOnScroll();
+        initBackToTop();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPageEnhancements, { once: true });
+      } else {
+        initPageEnhancements();
+      }
+
+      document.addEventListener('astro:page-load', initPageEnhancements);
+      document.addEventListener('ui:results-updated', initRevealOnScroll);
     </script>
   </body>
 </html>

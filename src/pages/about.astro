@@ -2,106 +2,107 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { site } from '@/config/site';
 import { basePath } from '@/lib/base';
+
+// Keep award rows as data so table markup stays clean.
+const ctfResults = [
+  { contest: 'RITSEC CTF 2026', medal: '🥇' },
+  { contest: 'LA CTF 2026', medal: '🥇' },
+  { contest: 'Srdnlen CTF 2025', medal: '🥇' },
+  { contest: 'UofTCTF 2025', medal: '🥇' },
+  { contest: 'World Wide CTF 2024', medal: '🥇' },
+  { contest: 'VCS Championship 2024 (RedCTF)', medal: '🥈' },
+  { contest: 'BackdoorCTF 2025', medal: '🥇' },
+  { contest: 'RCTF 2025', medal: '🥉' },
+  { contest: 'justCTF 2025', medal: '🥈' },
+  { contest: 'L3akCTF 2025', medal: '🥇' },
+  { contest: 'R3CTF 2025', medal: '🥉' },
+  { contest: 'Grey Cat The Flag 2025', medal: '🥉' },
+  { contest: 'D^3CTF 2025', medal: '🥉' },
+  { contest: 'Midnight Sun CTF 2025 Quals', medal: '🥈' },
+  { contest: 'DamCTF 2025', medal: '🥈' },
+  { contest: 'UMDCTF 2025', medal: '🥉' },
+];
 ---
 
 <BaseLayout title="About" description="About me">
   <div class="grid gap-8 lg:grid-cols-3">
     <section class="lg:col-span-2">
-      <h1 class="text-3xl font-semibold text-white/95">About</h1>
-      <p class="mt-3 text-white/70">
-        I am Lukas (v1ncent). This is where I write and keep track of my write-ups on many CTF
-        events I participate in. Although my English writing skills may be limited, I endeavor to
-        write to the best of my abilities.
-      </p>
+      <div data-reveal>
+        <div class="section-kicker">Profile</div>
+        <h1 class="section-title mt-2 text-4xl">About</h1>
+        <p class="section-desc mt-3">
+          I am Lukas (v1ncent). This site is where I document CTF writeups and cloud security labs.
+          English is not my first language, but I keep every post practical and clear.
+        </p>
+      </div>
 
       <div class="mt-6 grid gap-4 md:grid-cols-2">
-        <div class="glass rounded-3xl p-5">
-          <div class="text-xs font-semibold tracking-wide text-white/75">FOCUS</div>
-          <ul class="mt-3 space-y-2 text-sm text-white/70">
-            <li>• Web exploitation & appsec research</li>
-            <li>• Reversing & binary exploitation (CTF)</li>
+        <div class="surface-panel rounded-3xl p-5" data-reveal data-reveal-delay="1">
+          <div class="text-xs font-semibold tracking-[0.12em] text-white/72">FOCUS</div>
+          <ul class="mt-3 space-y-2 text-sm text-white/72">
+            <li>• Web exploitation and application security research</li>
+            <li>• Reversing and binary exploitation in CTF</li>
           </ul>
         </div>
 
-        <div class="glass rounded-3xl p-5">
-          <div class="text-xs font-semibold tracking-wide text-white/75">EDUCATION</div>
-          <ul class="mt-3 space-y-2 text-sm text-white/70">
-            <li>• B.Sc. Information Technology - VNU-UET</li>
+        <div class="surface-panel rounded-3xl p-5" data-reveal data-reveal-delay="2">
+          <div class="text-xs font-semibold tracking-[0.12em] text-white/72">EDUCATION</div>
+          <ul class="mt-3 space-y-2.5">
+            <li class="rounded-2xl border border-white/12 bg-black/22 px-3 py-2.5">
+              <div class="text-sm font-medium text-white/86">B.Sc. Information Technology</div>
+              <div class="mt-0.5 text-xs text-white/58">
+                University of Engineering and Technology, Hanoi
+              </div>
+            </li>
+            <li class="rounded-2xl border border-white/12 bg-black/22 px-3 py-2.5">
+              <div class="text-sm font-medium text-white/86">Master of Cybersecurity</div>
+              <div class="mt-0.5 text-xs text-white/58">Toronto Metropolitan University (TMU)</div>
+            </li>
           </ul>
         </div>
       </div>
 
-      <div class="mt-6 glass rounded-3xl p-5">
-        <div class="text-xs font-semibold tracking-wide text-white/75">CAPTURE THE FLAG</div>
-        <p class="mt-3 text-sm text-white/70">
-          Active competitor in teams including <span class="text-white/85">Infobahn</span>.
+      <div class="mt-6 surface-panel rounded-3xl p-5" data-reveal>
+        <div class="text-xs font-semibold tracking-[0.12em] text-white/72">CAPTURE THE FLAG</div>
+        <p class="mt-3 text-sm text-white/72">
+          Active competitor in teams including <span class="text-white/88">Infobahn</span>.
         </p>
-        <div class="mt-3 overflow-hidden rounded-2xl border border-white/10">
-          <div
-            class="grid grid-cols-[1.7fr_0.7fr] gap-2 bg-white/5 px-4 py-2 text-xs uppercase tracking-wide text-white/60"
-          >
-            <div>Contest</div>
-            <div>Place</div>
-          </div>
-          <div class="divide-y divide-white/10 text-sm text-white/70">
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>Srdnlen CTF 2025</div><div>1st 🥇</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>UofTCTF 2025</div><div>1st 🥇</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>World Wide CTF 2024</div><div>1st 🥇</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>VCS Championship 2024 (RedCTF)</div><div>2nd 🥈</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>BackdoorCTF 2025</div><div>1st 🥇</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>RCTF 2025</div><div>3rd 🥉</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>justCTF 2025</div><div>2nd 🥈</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>L3akCTF 2025</div><div>1st 🥇</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>R3CTF 2025</div><div>3rd 🥉</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>Grey Cat The Flag 2025</div><div>3rd 🥉</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>D^3CTF 2025</div><div>3rd 🥉</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>Midnight Sun CTF 2025 Quals</div><div>2nd 🥈</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>DamCTF 2025</div><div>2nd 🥈</div>
-            </div>
-            <div class="grid grid-cols-[1.7fr_0.7fr] gap-2 px-4 py-2">
-              <div>UMDCTF 2025</div><div>3rd 🥉</div>
-            </div>
-          </div>
+        <div class="mt-3 overflow-x-auto rounded-2xl border border-white/12">
+          <table class="w-full table-fixed border-collapse text-sm text-white/72">
+            <thead class="bg-white/5 text-xs uppercase tracking-[0.12em] text-white/56">
+              <tr>
+                <th class="w-[82%] px-4 py-2 text-left font-medium">Contest</th>
+                <th class="w-[18%] px-4 py-2 text-center font-medium">Place</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+              {
+                ctfResults.map((item) => (
+                  <tr>
+                    <td class="px-4 py-2.5 align-middle">{item.contest}</td>
+                    <td class="px-4 py-2.5 text-center text-base leading-none align-middle">
+                      {item.medal}
+                    </td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <aside class="glass rounded-3xl p-6 shadow-glass">
+    <aside class="surface-panel rounded-3xl p-6" data-reveal>
       <div class="flex items-center gap-4">
         <img
-          class="h-16 w-16 rounded-3xl border border-white/10 bg-black/20 p-3"
+          class="h-16 w-16 rounded-3xl border border-white/14 bg-black/30 p-3"
           src={`${basePath}/astronaut.svg`}
           alt="astronaut"
         />
         <div>
-          <div class="text-lg font-semibold text-white/90">{site.author.name}</div>
-          <div class="text-sm text-white/60">{site.author.tagline}</div>
-          <div class="text-xs text-white/50">{site.author.location}</div>
+          <div class="text-lg font-semibold text-white/92">{site.author.name}</div>
+          <div class="text-sm text-white/62">{site.author.tagline}</div>
+          <div class="text-xs text-white/52">{site.author.location}</div>
         </div>
       </div>
 
@@ -109,10 +110,10 @@ import { basePath } from '@/lib/base';
         {
           site.socials.map((s) => (
             <a
-              class="block rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75 hover:bg-white/10 hover:text-white"
+              class="block rounded-2xl border border-white/14 bg-white/6 px-4 py-3 text-sm text-white/78 transition hover:border-white/24 hover:bg-white/12 hover:text-white"
               href={s.href}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               {s.label} →
             </a>
@@ -121,8 +122,8 @@ import { basePath } from '@/lib/base';
       </div>
 
       <div class="mt-6 text-xs text-white/55">
-        Tip: Edit <code class="rounded bg-black/30 px-1.5 py-0.5">src/config/site.ts</code> to customize
-        your info.
+        Tip: edit <code class="rounded bg-black/30 px-1.5 py-0.5">src/config/site.ts</code> to customize
+        profile details.
       </div>
     </aside>
   </div>
