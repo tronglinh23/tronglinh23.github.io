@@ -1,0 +1,51 @@
+---
+title: Azure Beginner Path
+description: 'Phase 5 notes: Azure Blob Storage exposure, Key Vault abuse, Storage Tables, Entra ID recon, AzureHound, BloodHound, Microsoft Graph, and M365 post-exploitation.'
+date: 2026-06-01
+tags:
+  - azure
+  - cloud-security
+  - entra-id
+  - bloodhound
+  - microsoft-graph
+  - m365
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 5 — Azure Beginner Path
+
+<Callout type="note" title="Phase Summary">
+Completed **4 Red Team labs** focused on Azure initial access, secret discovery, Entra ID reconnaissance, and Microsoft 365 post-exploitation.
+</Callout>
+
+Do Azure after AWS. The concepts are similar, but names and identity models are different.
+
+## Learning Objectives
+
+- Understand Azure Blob Storage exposure and how leaked files can create initial access.
+- Practice lateral movement through Azure Key Vault and Storage Tables.
+- Map Azure and Entra ID relationships with AzureHound and BloodHound.
+- Learn Microsoft Graph abuse paths across Microsoft 365 services.
+- Compare Azure identity patterns against the AWS IAM model from earlier phases.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | <span style="white-space: nowrap; display: inline-block; min-width: 4.5rem;">Type</span> | Summary |
+| --- | --- | --- | --- |
+| 24 | [Azure Blob Container to Initial Access](https://pwnedlabs.io/labs/azure-blob-container-to-initial-access) | 🔴&nbsp;Red | Azure Blob Storage exposure → secrets → initial foothold. |
+| 25 | [Unlock Access with Azure Key Vault](https://pwnedlabs.io/labs/unlock-access-with-azure-key-vault) | 🔴&nbsp;Red | Use Azure Key Vault and Storage Tables for lateral movement. |
+| 26 | [Intro to Azure Recon with BloodHound](https://pwnedlabs.io/labs/intro-to-azure-recon-with-bloodhound) | 🔴&nbsp;Red | Use AzureHound and BloodHound to map Azure/Entra attack paths. |
+| 27 | [Loot Exchange, Teams and SharePoint with GraphRunner](https://pwnedlabs.io/labs/loot-exchange-teams-and-sharepoint-with-graphrunner) | 🔴&nbsp;Red | Microsoft 365 post-exploitation with GraphRunner, PowerShell, Exchange, Teams, SharePoint, and OneDrive. |
+
+## Key Knowledge After Phase 5
+
+1. **Azure Blob Storage is a common exposure point**, similar to S3, but with Azure-specific container permissions and versioning behavior.
+2. **Key Vault access can become a major pivot**, because secrets, certificates, and connection strings often unlock additional resources.
+3. **Storage Tables can hold operational data and secrets** that support lateral movement once initial Azure access exists.
+4. **Entra ID is central to Azure attack paths**, and understanding users, groups, roles, apps, and service principals is mandatory.
+5. **AzureHound and BloodHound turn identity relationships into attack graphs**, making privilege paths easier to reason about.
+6. **Microsoft Graph is the M365 control and data plane**, so post-exploitation often crosses Exchange, Teams, SharePoint, and OneDrive.

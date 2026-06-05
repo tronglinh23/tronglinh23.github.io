@@ -1,0 +1,48 @@
+---
+title: GCP Beginner Path
+description: 'Phase 6 notes: Google Cloud Storage exposure, hidden file discovery, SSRF, Gopher bypasses, metadata service access, and GCP initial access.'
+date: 2026-06-03
+tags:
+  - gcp
+  - cloud-security
+  - google-cloud-storage
+  - ssrf
+  - metadata-service
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 6 — GCP Beginner Path
+
+<Callout type="note" title="Phase Summary">
+Completed **2 Red Team labs** focused on Google Cloud Storage exposure and SSRF-based GCP initial access.
+</Callout>
+
+Do these after AWS and Azure basics.
+
+## Learning Objectives
+
+- Understand Google Cloud Storage exposure and object discovery limits.
+- Practice finding hidden files when bucket listing is restricted.
+- Exploit SSRF paths that target cloud metadata services.
+- Learn how Gopher can bypass some SSRF protections.
+- Compare GCP initial-access patterns against AWS and Azure cloud workflows.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | <span style="white-space: nowrap; display: inline-block; min-width: 4.5rem;">Type</span> | Summary |
+| --- | --- | --- | --- |
+| 28 | [Reveal Hidden Files in Google Storage](https://pwnedlabs.io/labs/reveal-hidden-files-in-google-storage) | 🔴&nbsp;Red | Misconfigured Google Cloud Storage and hidden file exposure. |
+| 29 | [Exploit SSRF with Gopher for GCP Initial Access](https://pwnedlabs.io/labs/exploit-ssrf-with-gopher-for-gcp-initial-access) | 🔴&nbsp;Red | SSRF + Gopher protocol → GCP metadata access. |
+
+## Key Knowledge After Phase 6
+
+1. **Google Cloud Storage exposure is not always obvious**, because object access can still leak data even when bucket listing is denied.
+2. **Hidden file discovery matters in cloud storage testing**, especially for backups, archives, source bundles, and configuration files.
+3. **SSRF can become cloud initial access** when an application can reach a metadata service from a trusted network position.
+4. **Gopher support can weaken SSRF defenses** by allowing crafted protocol-level requests through unexpected URL handlers.
+5. **GCP metadata access requires platform-specific knowledge**, including metadata endpoints, headers, tokens, and resource enumeration.
+6. **Cross-cloud comparison improves judgment**, because AWS, Azure, and GCP share patterns but differ in identity, metadata, and storage behavior.

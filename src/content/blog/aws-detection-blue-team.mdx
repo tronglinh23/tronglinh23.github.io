@@ -1,0 +1,53 @@
+---
+title: AWS Detection + Blue Team
+description: 'Phase 4 notes: AWS detection, CloudTrail analysis, Athena queries, Macie, Security Hub, Amazon Detective, and credential abuse response.'
+date: 2026-05-29
+tags:
+  - aws
+  - cloud-security
+  - blue-team
+  - cloudtrail
+  - athena
+  - macie
+  - security-hub
+  - pwnedlabs
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Phase 4 — AWS Detection + Blue Team
+
+<Callout type="note" title="Phase Summary">
+Completed **5 labs** (**4 Blue / 1 Purple**) focused on detecting cloud attacks, investigating suspicious activity, and improving AWS security posture.
+</Callout>
+
+Now learn how defenders detect the attacks you practiced in the earlier AWS phases.
+
+## Learning Objectives
+
+- Detect IAM compromise patterns with CloudTrail and Athena.
+- Use managed AWS security services to surface risky S3 data and posture gaps.
+- Understand how credential abuse appears in cloud audit telemetry.
+- Practice investigation workflows with Amazon Detective.
+- Connect red-team behavior to defensive logging, triage, and mitigation.
+
+## Lab Path
+
+| <span style="white-space: nowrap;">Order</span> | Lab | <span style="white-space: nowrap; display: inline-block; min-width: 4.5rem;">Type</span> | Summary |
+| --- | --- | --- | --- |
+| 19 | [Identify IAM Breaches with CloudTrail and Athena](https://pwnedlabs.io/labs/identify-iam-breaches-with-cloudtrail-and-athena) | 🔵&nbsp;Blue | Use CloudTrail and Athena to detect IAM attacks and compromised users. |
+| 20 | [Secure S3 with Amazon Macie](https://pwnedlabs.io/labs/secure-s3-with-amazon-macie) | 🔵&nbsp;Blue | Discover sensitive data and risky S3 bucket permissions. |
+| 21 | [Reveal Hidden Risks with AWS Security Hub CSPM](https://pwnedlabs.io/labs/reveal-hidden-risks-with-aws-security-hub) | 🔵&nbsp;Blue | Learn AWS Security Hub and cloud posture management. |
+| 22 | [Execute and Identify Credential Abuse in AWS](https://pwnedlabs.io/labs/execute-and-identify-credential-abuse-in-aws) | 🔴/🔵&nbsp;Purple | Practice credential abuse and learn detection/mitigation. |
+| 23 | [Investigate Threats with Amazon Detective](https://pwnedlabs.io/labs/investigate-threats-with-amazon-detective) | 🔵&nbsp;Blue | Learn Amazon Detective for investigating security events. |
+
+## Key Knowledge After Phase 4
+
+1. **CloudTrail is the defensive source of truth** for AWS control-plane activity and IAM abuse investigations.
+2. **Athena makes raw cloud logs operational**, especially when looking for login anomalies, unusual API calls, and compromised identities.
+3. **Macie helps prioritize S3 data risk** by combining sensitive-data discovery with bucket exposure context.
+4. **Security Hub supports CSPM workflows** by centralizing findings and surfacing posture issues across services.
+5. **Amazon Detective improves investigation speed** by connecting identities, resources, findings, and behavior into a clearer timeline.
+6. **Credential abuse detection requires context**, including user baseline, source IPs, regions, access keys, API sequences, and remediation steps.
