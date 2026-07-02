@@ -1,0 +1,255 @@
+---
+title: My 10-Week HTB Sherlocks Blue Team Roadmap
+description: 'A practical 10-week HTB Sherlocks roadmap for SOC, DFIR, Blue Team, Purple Team, malware triage, cloud IR, threat intel, and interview prep.'
+date: 2026-07-02
+tags:
+  - htb
+  - sherlocks
+  - blue-team
+  - dfir
+  - soc
+  - malware-analysis
+  - cloud-ir
+  - threat-intelligence
+  - roadmap
+category: research
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+import Spoiler from '@/components/mdx/Spoiler.astro';
+
+## Roadmap
+
+This is my current HTB Sherlocks roadmap for building a practical SOC / Blue Team foundation.
+
+The point is not to collect solves. The point is to get better at reading evidence, building timelines, explaining attacker actions, and writing notes that can survive an interview.
+
+<div className="not-prose my-6 grid gap-3 md:grid-cols-3">
+  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Duration</div>
+    <div className="mt-1 text-xl font-semibold text-white">10 weeks</div>
+  </div>
+  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Target</div>
+    <div className="mt-1 text-xl font-semibold text-white">SOC / Blue Team</div>
+  </div>
+  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Labs</div>
+    <div className="mt-1 text-xl font-semibold text-white">40 Sherlocks</div>
+  </div>
+</div>
+
+<Callout type="tip" title="How I use each lab">
+  <p>
+    For every Sherlock, I write a short case summary, initial access, affected host/user, first
+    suspicious timestamp, evidence, attacker actions, IoCs, MITRE ATT&CK mapping, containment, one
+    detection idea, and a 90-second interview answer.
+  </p>
+</Callout>
+
+## Week 1 - Core Investigation Foundation
+
+| Lab                                                   | Area | Level     | Practice                                                                                 |
+| ----------------------------------------------------- | ---- | --------- | ---------------------------------------------------------------------------------------- |
+| [Brutus](https://app.hackthebox.com/sherlocks/Brutus) | DFIR | Very Easy | Linux `auth.log`, `wtmp`, SSH brute force, successful login, persistence, sudo activity. |
+| [Unit42](https://app.hackthebox.com/sherlocks/Unit42) | DFIR | Very Easy | Sysmon Event IDs, process tree, DNS queries, network connection, timestomping.           |
+| [BFT](https://app.hackthebox.com/sherlocks/BFT)       | DFIR | Very Easy | `$MFT`, MFTECmd, Timeline Explorer, Zone.Identifier, malicious file recovery.            |
+| [Telly](https://app.hackthebox.com/sherlocks/Telly)   | SOC  | Very Easy | Basic SOC alert triage and case handling.                                                |
+
+## Week 2 - PCAP, AD Intro, Malware, Threat Intel
+
+| Lab                                                                       | Area                | Level     | Practice                                                                                |
+| ------------------------------------------------------------------------- | ------------------- | --------- | --------------------------------------------------------------------------------------- |
+| [Meerkat](https://app.hackthebox.com/sherlocks/Meerkat)                   | SOC                 | Easy      | PCAP, Suricata alerts, credential stuffing, CVE exploitation, web app compromise.       |
+| [Campfire-1](https://app.hackthebox.com/sherlocks/Campfire-1)             | DFIR                | Very Easy | Kerberoasting detection, Event ID 4769, Rubeus, PowerView, AD log analysis.             |
+| [Subatomic](https://app.hackthebox.com/sherlocks/Subatomic)               | Malware Analysis    | Medium    | Electron malware, fake installer, Discord hijacking, browser data theft, static triage. |
+| [ElectricBreeze-1](https://app.hackthebox.com/sherlocks/ElectricBreeze-1) | Threat Intelligence | Very Easy | Threat intel pivoting, campaign context, external indicator enrichment.                 |
+
+## Week 3 - Windows Logs, AD Network Attack, Web Compromise, Cloud
+
+| Lab                                                         | Area  | Level     | Practice                                                                        |
+| ----------------------------------------------------------- | ----- | --------- | ------------------------------------------------------------------------------- |
+| [LogJammer](https://app.hackthebox.com/sherlocks/LogJammer) | DFIR  | Easy      | Windows Security, System, Defender, Firewall, PowerShell logs, scheduled tasks. |
+| [Noxious](https://app.hackthebox.com/sherlocks/Noxious)     | SOC   | Very Easy | LLMNR poisoning, rogue device detection, AD network recon.                      |
+| [Bumblebee](https://app.hackthebox.com/sherlocks/Bumblebee) | DFIR  | Easy      | phpBB SQLite database, web logs, web shell and admin compromise analysis.       |
+| [Nubilum-1](https://app.hackthebox.com/sherlocks/Nubilum-1) | Cloud | Medium    | AWS CloudTrail, compromised EC2, exposed S3, cloud IR, PoshC2.                  |
+
+## Week 4 - AS-REP, Fake CAPTCHA, PE Triage, Insider Timeline
+
+| Lab                                                                                   | Area                | Level     | Practice                                                                         |
+| ------------------------------------------------------------------------------------- | ------------------- | --------- | -------------------------------------------------------------------------------- |
+| [Campfire-2](https://app.hackthebox.com/sherlocks/Campfire-2)                         | DFIR                | Very Easy | AS-REP roasting, Event ID 4768, vulnerable AD account detection.                 |
+| [Pikaptcha](https://app.hackthebox.com/sherlocks/Pikaptcha)                           | DFIR                | Easy      | Fake CAPTCHA, PowerShell Run dialog abuse, registry artifacts, PCAP correlation. |
+| [Heartbreaker-Continuum](https://app.hackthebox.com/sherlocks/Heartbreaker-Continuum) | Malware Analysis    | Easy      | PEStudio, Ghidra, VirusTotal, MITRE ATT&CK mapping.                              |
+| [Constellation](https://app.hackthebox.com/sherlocks/Constellation)                   | Threat Intelligence | Medium    | Insider threat, URL forensics, Discord and Google timeline reconstruction.       |
+
+## Week 5 - NTLM Relay, Endpoint Artifacts, Malware, GCP Cloud
+
+| Lab                                                                   | Area             | Level     | Practice                                                                |
+| --------------------------------------------------------------------- | ---------------- | --------- | ----------------------------------------------------------------------- |
+| [Reaper](https://app.hackthebox.com/sherlocks/Reaper)                 | DFIR             | Very Easy | NTLM relay, LLMNR response poisoning, Windows Security Log correlation. |
+| [Noted](https://app.hackthebox.com/sherlocks/Noted)                   | DFIR             | Easy      | Notepad++ artifacts, AppData, data extortion trail.                     |
+| [SalineBreeze-2](https://app.hackthebox.com/sherlocks/SalineBreeze-2) | Malware Analysis | Easy      | Malware triage, IoC extraction, breach investigation.                   |
+| [MisCloud](https://app.hackthebox.com/sherlocks/MisCloud)             | Cloud            | Medium    | GCP breach, Gitea vulnerability, cloud misconfiguration.                |
+
+## Week 6 - AD Credential Theft, SOC Case, Malware Medium, Email Forensics
+
+| Lab                                                               | Area             | Level     | Practice                                                                |
+| ----------------------------------------------------------------- | ---------------- | --------- | ----------------------------------------------------------------------- |
+| [CrownJewel-1](https://app.hackthebox.com/sherlocks/CrownJewel-1) | DFIR             | Very Easy | NTDS.dit dump, Volume Shadow Copy, AD enumeration.                      |
+| [Cuidado](https://app.hackthebox.com/sherlocks/Cuidado)           | SOC              | Easy      | SOC alert investigation and correlation.                                |
+| [SneakyKeys](https://app.hackthebox.com/sherlocks/SneakyKeys)     | Malware Analysis | Medium    | Medium malware triage, keylogging and persistence-style reasoning.      |
+| [TickTock](https://app.hackthebox.com/sherlocks/TickTock)         | DFIR             | Medium    | Spear-phishing investigation, email forensics, timeline reconstruction. |
+
+## Week 7 - Lateral Movement, Exfiltration, Memory, Cloud Follow-up
+
+| Lab                                                               | Area  | Level     | Practice                                                        |
+| ----------------------------------------------------------------- | ----- | --------- | --------------------------------------------------------------- |
+| [CrownJewel-2](https://app.hackthebox.com/sherlocks/CrownJewel-2) | DFIR  | Very Easy | Lateral movement detection, Pass-the-Hash.                      |
+| [Litter](https://app.hackthebox.com/sherlocks/Litter)             | SOC   | Easy      | Network forensics, data exfiltration indicators.                |
+| [Recollection](https://app.hackthebox.com/sherlocks/Recollection) | DFIR  | Easy      | Memory forensics, Volatility, suspicious process analysis.      |
+| [Nubilum2](https://app.hackthebox.com/sherlocks/Nubilum2)         | Cloud | Easy      | Cloud follow-up investigation, identity and resource reasoning. |
+
+## Week 8 - Threat Hunting, Active TI, Malware Module, Cloud Campaign
+
+| Lab                                                                                                                       | Area                | Level  | Practice                                                                |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------ | ----------------------------------------------------------------------- |
+| [Tracer](https://app.hackthebox.com/sherlocks/Tracer)                                                                     | DFIR                | Easy   | PsExec detection, SOC alert investigation, lateral movement.            |
+| [KitsuneHook](https://app.hackthebox.com/sherlocks/KitsuneHook)                                                           | Threat Intelligence | Easy   | Active threat intel practice, newer challenge, less writeup dependency. |
+| [Malevolent ModMaker](https://app.hackthebox.com/sherlocks/Malevolent%20ModMaker)                                         | Malware Analysis    | Medium | Custom malware module analysis.                                         |
+| [OpTinselTrace24-3: Blizzard Breakdown](https://app.hackthebox.com/sherlocks/OpTinselTrace24-3%3A%20Blizzard%20Breakdown) | Cloud               | Medium | Cloud investigation in a campaign-style case.                           |
+
+## Week 9 - APT, Memory/Event Correlation, Hard Network, Hard Malware
+
+| Lab                                                                     | Area             | Level  | Practice                                                           |
+| ----------------------------------------------------------------------- | ---------------- | ------ | ------------------------------------------------------------------ |
+| [APTNightmare](https://app.hackthebox.com/sherlocks/APTNightmare)       | DFIR             | Medium | APT-style investigation, multi-stage incident reconstruction.      |
+| [OpTinselTrace-3](https://app.hackthebox.com/sherlocks/OpTinselTrace-3) | DFIR             | Medium | Volatility3, Chainsaw, memory plus event log correlation.          |
+| [ProcNet](https://app.hackthebox.com/sherlocks/ProcNet)                 | DFIR             | Hard   | Network traffic analysis, malware investigation, API data capture. |
+| [Lockpick3.0](https://app.hackthebox.com/sherlocks/Lockpick3.0)         | Malware Analysis | Hard   | Hard ransomware and malware continuation after Lockpick2.0.        |
+
+## Week 10 - Final Capstone
+
+| Lab                                                                     | Area             | Level  | Practice                                                                             |
+| ----------------------------------------------------------------------- | ---------------- | ------ | ------------------------------------------------------------------------------------ |
+| [OpTinselTrace-4](https://app.hackthebox.com/sherlocks/OpTinselTrace-4) | DFIR             | Easy   | Data exfiltration, C2 communication analysis.                                        |
+| [OpTinselTrace-5](https://app.hackthebox.com/sherlocks/OpTinselTrace-5) | DFIR             | Hard   | Full APT chain reconstruction and final reporting.                                   |
+| [Lockpick4.0](https://app.hackthebox.com/sherlocks/Lockpick4.0)         | Malware Analysis | Insane | Ransomware/malware capstone, deeper encryption and key recovery reasoning.           |
+| [LogForge](https://app.hackthebox.com/sherlocks/LogForge)               | DFIR             | Medium | Blind final exam style practice: log correlation without leaning on public writeups. |
+
+## Reading Layer
+
+| Priority | Topic                                      | Read with                                               | Link                                                                                                          |
+| -------- | ------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Must     | C2 communication detection                 | Meerkat, Litter, ProcNet, OpTinselTrace-4, APTNightmare | [HTB](https://www.hackthebox.com/blog/detecting-investigating-c2-communication)                               |
+| Must     | LLMNR poisoning detection                  | Noxious, Reaper, Campfire-1, Campfire-2                 | [HTB](https://www.hackthebox.com/blog/llmnr-poisoning-attack-detection)                                       |
+| Must     | SmartScreen logs for execution evidence    | Pikaptcha, Noted, LogJammer                             | [HTB](https://www.hackthebox.com/blog/smartscreen-logs-evidence-execution)                                    |
+| Must     | PsExec lateral movement artifacts          | Tracer, CrownJewel-2, APTNightmare                      | [HTB](https://www.hackthebox.com/blog/how-to-detect-psexec-and-lateral-movements)                             |
+| Must     | AWS CloudTrail log analysis                | Nubilum-1, Nubilum2, MisCloud, OpTinselTrace24-3        | [HTB](https://www.hackthebox.com/blog/securing-the-cloud-expert-tips-for-analyzing-cloudtrail-logs)           |
+| Strong   | Windows event logs for incident responders | Unit42, LogJammer, Campfire-1, Campfire-2, Reaper       | [HTB](https://www.hackthebox.com/blog/decoding-windows-event-logs-a-definitive-guide-for-incident-responders) |
+| Strong   | Incident response report template          | All labs, especially Week 4 onward                      | [HTB](https://www.hackthebox.com/blog/writing-incident-response-report-template)                              |
+| Strong   | Network traffic analysis                   | Meerkat, Litter, Noxious, Reaper, ProcNet               | [HTB](https://www.hackthebox.com/blog/network-traffic-analysis)                                               |
+| Strong   | Volatility and memory forensics            | Recollection, OpTinselTrace-3, APTNightmare             | [HTB](https://www.hackthebox.com/blog/memory-forensics-volatility-write-up)                                   |
+| Strong   | Anti-forensics techniques                  | BFT, Unit42, Noted, APTNightmare, OpTinselTrace         | [HTB](https://www.hackthebox.com/blog/anti-forensics-techniques)                                              |
+
+<Spoiler summary="Optional career and vocabulary reads">
+
+| Topic                           | When I read it                        | Link                                                                                             |
+| ------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| SOC onboarding plan             | Before applying or interviewing       | [HTB](https://www.hackthebox.com/blog/30-60-90-day-onboarding-plan-SOC-analyst-checklist)        |
+| SOC analyst interview questions | After Weeks 2, 4, 8, and 10           | [HTB](https://www.hackthebox.com/blog/soc-analyst-interview-questions)                           |
+| SOC analyst skill map           | Week 1 or before CV work              | [HTB](https://www.hackthebox.com/blog/13-essential-skills-for-soc-analysts)                      |
+| Blue team job direction         | Before role mapping                   | [HTB](https://www.hackthebox.com/blog/cybersecurity-blue-team-jobs-roles-salaries-skills)        |
+| Weekly SOC team habits          | When thinking about real SOC workflow | [HTB](https://www.hackthebox.com/blog/what-high-performing-soc-teams-do-weekly)                  |
+| Cloud weakness context          | Before cloud weeks                    | [HTB](https://www.hackthebox.com/blog/global-cyber-skills-benchmark-cloud-security-breaches)     |
+| USB attack detection            | Optional endpoint add-on              | [HTB](https://www.hackthebox.com/blog/detecting-usb-cyber-attacks-guide)                         |
+| Red team tool context           | Optional attacker-tool vocabulary     | [CrackTheLab](https://crackthelab.com/blogs/top-red-team-tools-every-ethical-hacker-should-know) |
+
+</Spoiler>
+
+## Terminology Reference
+
+The glossary is intentionally grouped so I can review only the terms related to the lab I am working on.
+
+<Spoiler summary="Investigation workflow terms">
+
+| Term              | Short explanation                                                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| SOC               | Security Operations Center. Đội theo dõi alert, điều tra sự kiện đáng ngờ, phân loại true positive/false positive và escalation khi cần. |
+| DFIR              | Digital Forensics and Incident Response. Mảng tập trung vào thu thập evidence, phân tích artifact, dựng timeline và xử lý incident.      |
+| Purple Team       | Cách học hoặc vận hành kết hợp Red Team và Blue Team: hiểu attacker làm gì để viết detection và response tốt hơn.                        |
+| IoC               | Indicator of Compromise. Dấu hiệu compromise như IP, domain, hash, file path, username, process, registry key.                           |
+| MITRE ATT&CK      | Knowledge base để map hành vi attacker thành tactic/technique, ví dụ credential access, lateral movement, exfiltration.                  |
+| Containment       | Bước chặn incident lan rộng: isolate host, disable account, revoke key, block IoC, preserve evidence.                                    |
+| Timeline          | Chuỗi timestamp theo thứ tự để trả lời: chuyện gì xảy ra trước, user/host nào bị ảnh hưởng, attacker làm gì tiếp theo.                   |
+| Evidence stacking | Không dựa vào một artifact duy nhất. Ví dụ muốn chứng minh execution thì cross-check Sysmon, Prefetch, LNK, SmartScreen, ShimCache.      |
+| SIEM              | Nền tảng gom log và alert như Splunk, Sentinel, Elastic. Dùng để search, correlate, detect và triage.                                    |
+| EDR               | Endpoint Detection and Response. Agent trên endpoint giúp thấy process, file, network, command line và response như isolate host.        |
+
+</Spoiler>
+
+<Spoiler summary="Windows forensic artifacts">
+
+| Term                         | Short explanation                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Sysmon                       | Windows telemetry tool ghi process creation, network connection, DNS query, file creation, registry event. Rất quan trọng trong DFIR. |
+| Event ID                     | Mã định danh của Windows event. Ví dụ 4769 liên quan Kerberos service ticket, 4768 liên quan AS-REQ/AS-REP.                           |
+| PowerShell 4104              | Event ID ghi PowerShell Script Block Logging. Rất hữu ích khi attacker chạy script hoặc command obfuscated.                           |
+| Prefetch                     | Windows artifact cho biết program từng chạy, thời gian chạy gần đây và file liên quan. Dùng để chứng minh execution.                  |
+| ShimCache / AppCompatCache   | Artifact Windows lưu dấu vết application compatibility. Có thể hỗ trợ chứng minh file từng tồn tại hoặc từng được hệ thống xử lý.     |
+| LNK / Jump List / RecentDocs | Artifact user activity. Dùng để thấy user mở file nào, shortcut nào được tạo, file nào xuất hiện gần đây.                             |
+| SmartScreen logs             | Log của Windows SmartScreen có thể hỗ trợ chứng minh app/file được mở hoặc user tương tác với file đáng ngờ.                          |
+| `$MFT`                       | Master File Table của NTFS. Chứa metadata file/folder như timestamp, path, size, record. Rất mạnh cho file-system timeline.           |
+| USN Journal                  | NTFS change journal. Ghi thay đổi file như create, delete, rename, overwrite. Hay dùng để trace lateral movement hoặc tool execution. |
+| Zone.Identifier              | Alternate Data Stream cho biết file đến từ Internet zone. Hữu ích khi điều tra downloaded file hoặc phishing attachment.              |
+
+</Spoiler>
+
+<Spoiler summary="Network, C2, and Active Directory terms">
+
+| Term               | Short explanation                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| PCAP               | Packet capture. File ghi network packets để phân tích traffic, protocol, request/response, beaconing, C2 hoặc exfiltration.       |
+| Suricata           | IDS/IPS engine tạo alert từ network traffic. Trong SOC lab, alert Suricata thường là điểm bắt đầu để pivot sang PCAP.             |
+| C2                 | Command and Control. Kênh attacker dùng để gửi lệnh, nhận output, deploy payload, maintain access hoặc exfiltrate data.           |
+| Beaconing          | Pattern kết nối lặp lại theo interval. Thường dùng để phát hiện C2 khi host gọi ra ngoài đều đặn.                                 |
+| DNS tunneling      | Kỹ thuật nhét data hoặc command vào DNS query/response để tránh detection truyền thống.                                           |
+| DGA                | Domain Generation Algorithm. Malware tự sinh nhiều domain để tìm C2 server, làm blocklist khó hơn.                                |
+| LLMNR              | Link-Local Multicast Name Resolution. Giao thức Windows dùng để hỏi tên host trong LAN khi DNS không resolve được, chạy UDP 5355. |
+| NBT-NS             | NetBIOS Name Service. Giao thức cũ hơn để resolve NetBIOS name trong LAN, chạy UDP 137, thường bị abuse cùng LLMNR.               |
+| NetNTLMv2          | Challenge-response hash Windows gửi khi xác thực NTLM. Attacker có thể capture rồi crack offline hoặc relay.                      |
+| NTLM relay         | Attacker chuyển tiếp NTLM authentication của victim sang service khác để đăng nhập thay victim, thường liên quan SMB/LDAP.        |
+| SMB signing        | Cơ chế ký SMB message để giảm rủi ro relay. Nếu không enforced, NTLM relay dễ xảy ra hơn.                                         |
+| Kerberoasting      | Attack xin Kerberos service ticket cho SPN account rồi crack offline để lấy password service account.                             |
+| AS-REP roasting    | Attack nhắm user không bật Kerberos pre-authentication, lấy AS-REP rồi crack offline.                                             |
+| Rubeus             | Tool phổ biến cho Kerberos abuse như Kerberoasting, AS-REP roasting, ticket manipulation.                                         |
+| PowerView          | PowerShell tool dùng để enumerate Active Directory: user, group, session, ACL, SPN, trust.                                        |
+| NTDS.dit           | Database của Active Directory chứa domain data và password hashes. Nếu bị dump là incident nghiêm trọng.                          |
+| Volume Shadow Copy | Windows snapshot mechanism. Attacker có thể abuse để copy locked files như `NTDS.dit`.                                            |
+| Pass-the-Hash      | Lateral movement technique dùng NTLM hash để authenticate mà không cần plaintext password.                                        |
+| PsExec             | Sysinternals tool cho remote execution qua SMB/service creation. Legit admin tool nhưng attacker hay abuse để lateral movement.   |
+| Named pipe         | IPC mechanism trên Windows. Một số remote execution/C2/lateral movement tools để lại named pipe artifacts.                        |
+
+</Spoiler>
+
+<Spoiler summary="Cloud, web, malware, and memory terms">
+
+| Term                | Short explanation                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| CloudTrail          | AWS audit log cho API activity từ console, CLI, SDK. Dùng để điều tra IAM abuse, EC2, S3, access key activity.                    |
+| EC2 / S3            | EC2 là compute instance của AWS; S3 là object storage. Hai dịch vụ này hay xuất hiện trong cloud IR case.                         |
+| Web shell           | File/script trên web server cho phép attacker chạy command hoặc quản lý server từ xa.                                             |
+| SQLite              | Lightweight database dạng file. Hay gặp trong app/web artifact, browser data, hoặc lab web compromise.                            |
+| PE file             | Windows executable format như `.exe` hoặc `.dll`. Malware triage thường bắt đầu từ PE metadata, strings, imports.                 |
+| PEStudio            | Tool static triage PE file: imports, strings, indicators, entropy, suspicious metadata.                                           |
+| Ghidra              | Reverse engineering tool để đọc decompiled code, function, string reference và malware logic.                                     |
+| VirusTotal          | Dịch vụ tra hash/file/domain/IP để xem detection, relations, community notes và threat context.                                   |
+| Volatility          | Memory forensics framework để phân tích RAM dump: process, network connection, command line, injected code.                       |
+| Chainsaw            | Tool hunt Windows Event Logs bằng Sigma rules hoặc keyword logic, thường dùng để lọc nhanh event đáng ngờ.                        |
+| Exfiltration        | Hành vi đưa dữ liệu ra khỏi môi trường nạn nhân. Evidence có thể nằm ở network traffic, cloud logs, archive files, upload events. |
+| Threat Intelligence | Context bên ngoài về IP, domain, hash, campaign, TTP, malware family hoặc actor để enrich investigation.                          |
+
+</Spoiler>
+
+By the end, I want clean notes, real evidence, detection ideas, containment steps, and short interview-ready explanations.
