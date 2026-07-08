@@ -1,0 +1,176 @@
+---
+title: 'HTB Sherlock: Subatomic'
+description: 'Malware triage notes for HTB Sherlock Subatomic, covering an NSIS-packed Electron stealer, Discord token theft, browser credential collection, and JavaScript runtime instrumentation.'
+date: 2026-07-08
+tags:
+  - htb
+  - sherlock
+  - malware-analysis
+  - forensics
+  - electron
+  - discord
+category: for
+difficulty: medium
+ctf_event: Hack The Box Sherlocks
+source_url: https://app.hackthebox.com/sherlocks/Subatomic
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+import TerminalBlock from '@/components/mdx/TerminalBlock.astro';
+
+## Case
+
+Forela reported that an employee's Discord account was sending suspicious messages with a link to a fake game file. The user tried to secure the account, but the messages continued.
+
+That behavior pointed away from a normal password-only compromise. If the messages continued after the user attempted to secure the account, the malware likely stole Discord session tokens or modified the local Discord client so the attacker could keep abusing the account.
+
+<Callout type="warning" title="Case hypothesis">
+The sample was likely a fake game installer that unpacked an Electron/Node.js stealer. The important evidence was not only the outer executable, but the installer resources and JavaScript payload inside it.
+</Callout>
+
+## Evidence
+
+| Item        | Value                                                              |
+| ----------- | ------------------------------------------------------------------ |
+| Sample type | NSIS installer executable                                          |
+| SHA256      | `7a95214e7077d7324c0e8dc7d20f2a4e625bc0ac7e14b1446e37c47dff7eeb5b` |
+| Reputation  | Checked with VirusTotal                                            |
+| C2 domain   | `illitmagnetic.site`                                               |
+| C2 endpoint | `https://illitmagnetic.site/api/`                                  |
+
+## Key Artifacts
+
+After unpacking the installer, the useful files were nested inside the packaged application rather than exposed directly by the outer executable.
+
+- NSIS installer executable
+- Extracted NSIS script: `[NSIS].nsi`
+- Embedded Electron/Node.js application
+- `app-32.7z`
+- `app.asar`
+- `package.json`
+- Obfuscated JavaScript payload: `app.js`
+
+## Tools Used
+
+- `7z` to extract the NSIS installer
+- `npm` and `asar` to inspect Electron application files
+- `rg` to search extracted files
+- Node.js preload hooks to dump deobfuscated JavaScript
+- VirusTotal for file reputation and metadata
+
+## Attack Technique
+
+The malware was delivered as a fake game installer. The NSIS wrapper dropped an Electron/Node.js application that acted as a stealer.
+
+The payload targeted:
+
+- Discord session tokens
+- Browser cookies
+- Saved browser passwords
+- Autofill data
+- Local Discord installations
+
+The Discord part was the key behavior for the case. Instead of only stealing credentials once, the malware also modified local Discord client files. That gave the attacker a way to maintain access and continue sending malicious messages from the victim's account.
+
+## Investigation Path
+
+### 1. Extract the NSIS installer
+
+The first step was to avoid treating the outer installer as the whole malware. NSIS installers often carry their real payload in bundled resources.
+
+<TerminalBlock title="$ extract installer">
+7z x suspicious-installer.exe -oextract
+</TerminalBlock>
+
+The extracted output included the NSIS script and installer resources. The script gave a quick view of what the installer staged and where the application payload lived.
+
+### 2. Review the NSIS script
+
+The extracted `[NSIS].nsi` helped identify installation behavior and pointed toward the embedded resources.
+
+The important pivot was the resource path:
+
+```text
+$PLUGINSDIR\resources
+```
+
+That directory contained the Electron application archive instead of a simple native payload.
+
+### 3. Inspect the Electron application
+
+Inside the installer resources, I found `app-32.7z` and then `app.asar`. Extracting the ASAR archive exposed the JavaScript application files.
+
+<TerminalBlock title="$ inspect electron app">
+npm install -g asar
+asar extract app.asar app
+rg -n "discord|token|cookie|password|illitmagnetic|api" app
+</TerminalBlock>
+
+The `package.json` dependencies were strong signals that this was a credential stealer, especially:
+
+- `@primno/dpapi`
+- `sqlite3`
+- `systeminformation`
+
+`@primno/dpapi` is especially suspicious in this context because Windows browser secrets are commonly protected with DPAPI. Paired with `sqlite3`, it suggested the payload was reading browser databases and decrypting stored secrets.
+
+### 4. Analyze the obfuscated JavaScript
+
+The main payload was in `app.js`, but the code was obfuscated. Static reading was enough to identify suspicious capability, but not enough to make the payload easy to explain.
+
+Instead of fully executing the malware, I used Node.js runtime instrumentation to intercept dynamic code generation and dump the real JavaScript payload.
+
+Useful hook points included:
+
+- `require`
+- `Function`
+- network modules
+- dynamically generated JavaScript strings
+
+This made the payload easier to inspect without needing to trust the packed application.
+
+### 5. Recover the C2 endpoint
+
+After deobfuscating the runtime-generated code, the C2 endpoint was visible:
+
+```text
+https://illitmagnetic.site/api/
+```
+
+That matched the broader stealer behavior: collect local secrets, package them, and send them to the attacker's server.
+
+## Findings
+
+The sample was an NSIS-packed Electron stealer distributed as a fake game installer.
+
+The malware:
+
+- unpacked an Electron/Node.js application from installer resources
+- loaded an obfuscated JavaScript payload from `app.js`
+- stole Discord tokens
+- targeted browser cookies, saved passwords, and autofill data
+- used DPAPI-related functionality to access protected Windows secrets
+- modified local Discord installations to maintain account abuse
+- exfiltrated stolen data to `https://illitmagnetic.site/api/`
+
+## Why the Discord Messages Continued
+
+Changing the account password was not enough because the attacker likely had more than the password.
+
+Two behaviors explain the continued abuse:
+
+- stolen Discord session tokens could allow authenticated access without re-entering the password
+- Discord client injection could re-steal tokens or keep malicious code active locally
+
+That is why remediation would need to include revoking sessions, removing the malware, reinstalling or cleaning Discord, rotating credentials, and checking browser-stored secrets.
+
+## What I Learned
+
+This case showed that the main payload may be hidden inside installer resources rather than the outer executable. For packaged malware, unpacking the installer is often the fastest way to reach the real logic.
+
+Electron malware is also approachable if you treat it like a Node.js application. Extracting `app.asar`, reading `package.json`, searching with `rg`, and instrumenting the JavaScript runtime can reveal the payload faster than trying to reverse the outer installer.
+
+## Interview Takeaway
+
+For packaged malware, always unpack the installer and inspect embedded resources. For obfuscated JavaScript malware, runtime instrumentation such as hooking `require`, `Function`, and network modules can quickly reveal the real payload while reducing execution risk.
