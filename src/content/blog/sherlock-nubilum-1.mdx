@@ -1,0 +1,218 @@
+---
+title: 'HTB Sherlock: Nubilum-1'
+description: 'AWS CloudTrail investigation of unauthorized EC2 activity, exposed S3 access, attacker infrastructure changes, and PoshC2 activity.'
+date: 2026-07-16
+tags:
+  - writeup
+  - htb
+  - sherlock
+  - aws
+  - cloudtrail
+  - incident-response
+  - poshc2
+category: for
+difficulty: medium
+ctf_event: HTB Sherlock
+source_url: https://0xdf.gitlab.io/2024/05/30/htb-sherlock-nubilum-1.html
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+<Callout type="note" title="Scope">
+  This write-up is based on the exported investigation notes and focuses on the activity timeline,
+  CloudTrail pivots, and key AWS artifacts observed during the case.
+</Callout>
+
+## Case Summary
+
+The cloud administration team received an AWS warning that an EC2 instance in their
+environment was being used for malicious activity. The system administrator did not remember
+deploying the instance and later found more than six unexpected EC2 instances running in the
+account.
+
+During the interview, the administrator confirmed several important points:
+
+- Most of the suspicious EC2 instances were deleted, except the instance suspected of malicious use.
+- No additional controls were added after discovery, such as MFA, IP allowlisting, or stronger S3 access restrictions.
+- The team frequently used an S3 bucket for backups, static websites, and scripts.
+- The team usually accessed the AWS console or APIs from `86.5.206.0/24`.
+- The S3 bucket was intentionally accessible globally without authentication.
+
+The investigation data included S3 directory listings under `/forela-storage/`, a Phase 1 UNIX
+collection, and AWS CloudTrail logs.
+
+## Investigation Goals
+
+The main questions for the case were:
+
+- Which AWS API activity came from suspicious infrastructure?
+- When did the attacker first interact with the AWS environment?
+- Which EC2 instances, key pairs, and security groups were created or modified?
+- How did the activity connect to the suspected C2 host?
+- What did the administrator do after discovering the unauthorized instances?
+
+## Evidence Sources
+
+Key artifacts used in the investigation:
+
+- AWS CloudTrail JSON logs for account `949622803460`
+- S3 directory data under `/forela-storage/`
+- Phase 1 UNIX collection from the suspicious EC2 instance
+- PoshC2 logs from the suspected C2 host
+- Interview notes from the cloud system administrator
+
+## CloudTrail Preparation
+
+The CloudTrail data contained 39,446 records. I flattened the nested CloudTrail JSON files into a
+single line-delimited file for easier searching and aggregation.
+
+```bash
+find CloudTrail/949622803460/CloudTrail/ -name '*.json' -exec cat {} + \
+  | jq -c '.Records[]' \
+  | wc -l
+```
+
+```text
+39446
+```
+
+```bash
+find CloudTrail/949622803460/CloudTrail/ -name '*.json' -exec cat {} + \
+  | jq -c '.Records[]' \
+  > cloudtrail.json
+```
+
+## First Pivot: Suspicious Source IPs
+
+The administrator stated that normal AWS activity should come from `86.5.206.0/24`. I therefore
+started by grouping CloudTrail activity by identity and source IP, excluding common private
+address ranges.
+
+```spl
+NOT (
+  sourceIPAddress="10.0.0.0/8"
+  OR sourceIPAddress="172.16.0.0/12"
+  OR sourceIPAddress="192.168.0.0/16"
+)
+| stats values(sourceIPAddress) as sourceIPAddresses by userIdentity.arn
+```
+
+The suspicious public range was `95.181.232.0/24`. A WHOIS lookup of `95.181.232.9` supported
+treating this range as attacker-controlled infrastructure rather than expected administrator
+activity.
+
+```spl
+sourceIPAddress="95.181.232.0/24"
+| stats min(eventTime), max(eventTime)
+```
+
+![CloudTrail time range for suspicious source IP activity](/uploads/sherlock-nubilum-1/sherlock-nubilum-1/attacker-ip-time-range.png)
+
+The suspicious range appeared in CloudTrail between:
+
+- First event: `2023-01-24T22:48:34Z`
+- Last event: `2023-01-25T14:35:02Z`
+
+## AWS API Activity From The Suspicious Range
+
+The next step was counting event names for activity from `95.181.232.0/24`.
+
+```spl
+sourceIPAddress="95.181.232.0/24"
+| stats count by eventName
+```
+
+![CloudTrail event counts from suspicious source IP activity](/uploads/sherlock-nubilum-1/sherlock-nubilum-1/attacker-event-counts.png)
+
+The major event types were:
+
+- `RunInstances`: EC2 instance launches
+- `CreateKeyPair`: SSH key pair creation
+- `CreateSecurityGroup`: security group creation
+- `AuthorizeSecurityGroupIngress`: security group ingress changes
+- `ModifySecurityGroupRules`: security group rule modification
+- `DescribeInstances`, `DescribeSecurityGroups`, and `DescribeSecurityGroupRules`: environment discovery
+
+This pattern matches an attacker preparing infrastructure, opening access, and repeatedly
+enumerating the account state.
+
+## Security Group Evidence
+
+Filtering for security group creation and enumeration showed activity from the same suspicious
+source range.
+
+```spl
+sourceIPAddress=95.181.232.0/24
+eventName=CreateSecurityGroup OR eventName=DescribeSecurityGroups
+| sort eventTime
+```
+
+![CloudTrail security group activity from suspicious source IP activity](/uploads/sherlock-nubilum-1/sherlock-nubilum-1/security-group-activity.png)
+
+One key event showed the IAM user `forela-ec2-automation` creating a security group named
+`1337` from `95.181.232.9` using the AWS CLI:
+
+```text
+userIdentity.userName: forela-ec2-automation
+sourceIPAddress: 95.181.232.9
+userAgent: aws-cli/1.22.34 Python/3.10.6 Linux/5.15.0-58-generic botocore/1.23.34
+eventName: CreateSecurityGroup
+groupName: 1337
+awsRegion: eu-central-1
+```
+
+## Timeline
+
+### January 24, 2023
+
+- `22:36:58Z`: `ec2.py` was downloaded by the attacker IP.
+- `22:37:59Z`: `ec2.py` was downloaded again by the attacker IP.
+- `22:48:34Z`: First CloudTrail event from the suspicious activity window.
+- `22:48:34Z`: Key pair `1337.key` was created.
+- `22:54:45Z`: `RunInstances` activity launched six `t2.micro` EC2 instances across three commands using `1337.key`.
+- `23:10:27Z`: Security group rules were modified.
+- `23:25:55Z`: The administrator terminated six EC2 instances.
+
+### January 25, 2023
+
+- `11:38:44Z`: Security group `13337` was created.
+- `11:51:02Z`: `RunInstances` launched five `t2.micro` EC2 instances using `1337.key`.
+- `11:56:46Z`: Six `DescribeSecurityGroupRules` and `AuthorizeSecurityGroupIngress` events showed security group enumeration and ingress modification.
+- `12:01:38Z`: Artifact `13337` was created.
+- `12:02:25Z`: `RunInstances` launched one `t2.micro` EC2 instance using `13337`.
+- `13:41:44Z`: Two additional `AuthorizeSecurityGroupIngress` events showed further ingress changes.
+- `13:59:00Z` to `14:03:02Z`: Two failed instance launches and one successful `t2.micro` launch occurred using `13337`.
+- `14:03:00Z`: `last-utmp.txt` from the CatScale collection showed the last boot time of the PoshC2 EC2 instance.
+- `14:35:02Z`: Last observed CloudTrail activity from the attacker IP range.
+- `15:00:46Z`: PoshC2 logs showed victim activity from `DESKTOP-R4KM0GJ\Marcus Athony`.
+- `15:11:37Z`: The administrator terminated six EC2 instances.
+
+## Findings
+
+The investigation points to unauthorized use of the `forela-ec2-automation` IAM user from
+`95.181.232.0/24`.
+
+The attacker created or used key material named `1337.key` and `13337`, launched multiple
+`t2.micro` EC2 instances, and changed security group ingress rules to support access to those
+instances. The activity was performed through the AWS CLI rather than the console, which aligns
+with scripted infrastructure deployment.
+
+The second day shows repeated instance launch attempts and security group changes shortly before
+the CatScale collection records the PoshC2 host booting. Later PoshC2 logs show interaction from
+the victim workstation `DESKTOP-R4KM0GJ`, connecting the cloud abuse to post-exploitation
+activity.
+
+## Lessons Learned
+
+- Public S3 access should be treated as an exposure risk, especially when buckets contain scripts,
+  backups, or deployment material.
+- MFA and source IP restrictions would have reduced the likelihood of successful AWS API abuse.
+- Terminating suspicious EC2 instances is not enough. Compromised IAM users, access keys, key
+  pairs, security groups, and persistence mechanisms must also be reviewed and revoked.
+- CloudTrail event grouping by `sourceIPAddress`, `eventName`, `userAgent`, and `userIdentity`
+  quickly separates expected administrator behavior from attacker automation.
+
+## Reference
+
+- [0xdf: HTB Sherlock Nubilum-1](https://0xdf.gitlab.io/2024/05/30/htb-sherlock-nubilum-1.html)
