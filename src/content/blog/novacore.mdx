@@ -22,7 +22,7 @@ https://github.com/hackthebox/business-ctf-2025/tree/master/web/novacore
 
 # What your exploit does (line-by-line intuition)
 
-## Stage 1 — Auth bypass → cache overflow → XSS → cookie exfil
+## Stage 1 - Auth bypass → cache overflow → XSS → cookie exfil
 
 **Headers trick**
 
@@ -121,7 +121,7 @@ report_error(..., prototype_pollution)
   to **navigate** (top-level navigation is not blocked by CSP) and leak `document.cookie`
   to your request bin. That gives you the **Flask session** cookie for admin.
 
-## Stage 2 — Privileged upload → TAR/ELF polyglot → RCE → flag
+## Stage 2 - Privileged upload → TAR/ELF polyglot → RCE → flag
 
 **Use admin session**
 

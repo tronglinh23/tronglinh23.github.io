@@ -1,6 +1,6 @@
 # CTF Cosmic Blog (Astro + Tailwind + MDX)
 
-A static, GitHub-Pages-friendly personal site for CTF posts, research notes, and link posts — with a cosmic/astronaut theme.
+A static, GitHub-Pages-friendly personal site for CTF posts, research notes, and link posts - with a cosmic/astronaut theme.
 
 If you want to find older challenge writeups that were written before this website existed, check the Notion workspace:
 

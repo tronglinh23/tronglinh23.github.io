@@ -1,0 +1,179 @@
+---
+title: 'HTB Sherlock: MisCloud'
+description: 'GCP incident response notes for HTB Sherlock MisCloud, covering exposed RDP, Gitea git-hook code execution, service-account abuse, Cloud Storage access, and data exfiltration.'
+date: 2026-07-22
+tags:
+  - writeup
+  - htb
+  - sherlock
+  - gcp
+  - cloud-ir
+  - cloud-security
+  - gitea
+  - incident-response
+category: for
+difficulty: medium
+ctf_event: HTB Sherlock
+source_url: https://app.hackthebox.com/sherlocks/MisCloud
+draft: false
+---
+
+import Callout from '@/components/mdx/Callout.astro';
+
+## Case Summary
+
+John runs an e-commerce startup called DummyExample with his partner, James. The business started
+on WordPress and shared hosting, then moved to a custom website on Google Cloud Platform after
+traffic increased.
+
+The GCP environment contains five VM instances and one Cloud Storage bucket. John and James develop
+the website through a self-hosted Gitea server running on GCP. Customer data was migrated to Cloud
+Storage, and the investigation started after that data was breached.
+
+The provided evidence included:
+
+- VPC network traffic capture
+- Google Cloud audit logs
+- VM inventory
+- Gitea HTTP and Git traffic
+- Cloud Storage access records
+
+<Callout type="warning" title="Investigation focus">
+  This incident is a cloud attack chain, not a single vulnerable service. The breach connects an
+  exposed Windows VM, authenticated Gitea abuse, overprivileged service accounts, lateral movement,
+  and Cloud Storage data access.
+</Callout>
+
+## Environment
+
+| VM | Internal IP | External IP | Role |
+| --- | --- | --- | --- |
+| `gitea-vm` | `10.128.0.4` | `34.66.191.87` | Gitea server on TCP/3000 |
+| `linux-machine1` | `10.128.0.7` | `34.42.164.212` | Linux workstation later used for staging |
+| `linux-machine2` | `10.128.0.2` | `34.172.179.63` | Linux workstation |
+| `packet-mirror-instance` | `10.128.0.5` | `34.28.192.153` | Packet mirroring host |
+| `windows-machine` | `10.128.0.3` | `34.45.236.159` | James's Windows workstation |
+
+Important identities and infrastructure:
+
+- Gitea: `34.66.191.87:3000`
+- Owner account: `student-00-525928304cc1@qwiklabs.net`
+- Default Compute Engine service account: `257145238219-compute@developer.gserviceaccount.com`
+- Storage service account: `storage-svc-acc@qwiklabs-gcp-00-848c1b920007.iam.gserviceaccount.com`
+- Sensitive bucket: `sensitive-ecomuser-data`
+- Sensitive object: `Customer-Data-e7b9e806c08435793e310d7137b068fa.xlsx`
+
+## Key Findings
+
+The likely owner IP was `154.198.108.200`, not the attacker. It performed normal GCP activity and
+later authenticated to Gitea as John. The traffic confirms credential use, but not credential theft.
+
+The attacker infrastructure was different:
+
+| Indicator | Role |
+| --- | --- |
+| `169.150.196.101` | External host that established the RDP session and later retrieved the encrypted spreadsheet |
+| `18.192.31.165:14509` | Reverse shell destination reached from `gitea-vm` |
+| `0.tcp.eu.ngrok.io:14509` | Ngrok endpoint associated with the reverse shell |
+
+The attacker gained an interactive path through the Windows VM, used James's Gitea credentials from
+that host, pushed a malicious Git hook, obtained code execution on `gitea-vm`, moved laterally to
+Linux hosts, and used a storage service account on `linux-machine1` to retrieve the customer
+spreadsheet.
+
+<Callout type="note" title="Credential handling">
+  The PCAP exposed Gitea login material because the service used cleartext HTTP. I am treating the
+  finding as transport and credential exposure rather than repeating the raw password in the write-up.
+</Callout>
+
+## Attack Timeline
+
+| Timestamp UTC | Event | Evidence and interpretation |
+| --- | --- | --- |
+| `2024-06-16 09:38:08` | John performs GCP activity | Audit logs show `student-00-525928304cc1@qwiklabs.net` calling Compute Engine APIs from `154.198.108.200`. Later Gitea activity from the same IP authenticates as John, so this is better treated as owner activity rather than confirmed attacker reconnaissance. |
+| `2024-06-16 09:40:35` | John signs in to Gitea | PCAP shows `154.198.108.200` submitting `user_name=John` to `/user/login`. Because the service used HTTP, the form fields were visible in the capture. The response loaded `John - Dashboard`. |
+| `2024-06-16 09:41:47 to 09:41:52` | John updates his repository | `154.198.108.200` performs authenticated Git activity against `/John/DummyExample-EcomWebsite.git` and pushes to `refs/heads/master`. There is no direct evidence that this push triggered the compromise. |
+| `2024-06-16 09:43:34` | External RDP probe reaches Windows | `169.150.196.101` opens an RDP connection to `10.128.0.3:3389`. The negotiation includes `Cookie: mstshash=student_0`, confirming RDP and exposing a username hint. |
+| `2024-06-16 09:43:39 to 09:57:30` | Long-lived RDP session | A second RDP/TLS connection from `169.150.196.101` to `windows-machine` stays active for almost 14 minutes and transfers about 5.4 MB. The encrypted traffic does not reveal how the Windows credential was obtained. |
+| `2024-06-16 09:48:35` | Internal Git operation begins | `windows-machine` (`10.128.0.3`) contacts Gitea (`10.128.0.4:3000`) and requests Git receive-pack for `/James/Test-Learn.git`. |
+| `2024-06-16 09:48:54` | James's credentials are used | PCAP contains HTTP Basic authentication for James. This confirms authenticated Gitea access from the Windows VM. |
+| `2024-06-16 09:48:55.148` | Malicious repository push | `windows-machine` sends `POST /James/Test-Learn.git/git-receive-pack`. Gitea returns `unpack ok` and accepts the new `master` reference. |
+| `2024-06-16 09:48:55.307` | Reverse shell connects | About 159 ms after the accepted push, `gitea-vm` initiates TCP from `10.128.0.4:41874` to `18.192.31.165:14509`. The supplied investigation answer maps the destination to `0.tcp.eu.ngrok.io:14509`. |
+| `2024-06-16 09:49:34` | Cloud discovery starts | From `34.66.191.87`, the default Compute Engine service account calls `storage.buckets.list`. At `09:49:40`, it calls `storage.objects.list` on `sensitive-ecomuser-data`. |
+| `2024-06-16 09:50:38 to 09:50:48` | Storage and compute reconnaissance | The same service account calls `storage.buckets.get`, then enumerates Compute Engine instances. |
+| `2024-06-16 09:52:27 to 09:53:12` | SSH lateral movement | PCAP shows SSH from `gitea-vm` to `packet-mirror-instance`, `linux-machine2`, and `linux-machine1`. Matching audit records show granted OS Login policy checks under the default Compute Engine service account. |
+| `2024-06-16 09:53:25` | Storage service account takes over | From `linux-machine1`'s public IP `34.42.164.212`, the storage service account lists buckets. At `09:53:38`, it lists objects in `sensitive-ecomuser-data`. |
+| `2024-06-16 09:53:53.197` | Sensitive object is retrieved | The storage service account invokes `storage.objects.get` for `Customer-Data-e7b9e806c08435793e310d7137b068fa.xlsx`. This is the direct Cloud Storage data access event. |
+| `2024-06-16 09:53:53 to 09:53:56` | Public exposure is attempted | Four `storage.objects.update` events attempt to add `allUsers` with `roles/storage.legacyObjectReader`. The records show severity `ERROR` and status code `9`, so the public ACL attempts failed. |
+| `2024-06-16 09:54:13 to 09:54:30` | XOR utility is retrieved | The Windows VM views and downloads `file-xor.py` from `/James/Test-Learn`. At `09:54:30.429`, `linux-machine1` retrieves the raw script from Gitea using `curl/7.88.1`. |
+| `2024-06-16 09:54:54` | Spreadsheet is downloaded again | Two additional `storage.objects.get` records appear for the same spreadsheet from `linux-machine1` using the storage service account. |
+| `2024-06-16 09:56:19` | HTTP service appears on TCP/3389 | `169.150.196.101` sends `GET /` to `34.42.164.212:3389`. Although TCP/3389 is normally RDP, the captured payload is HTTP. |
+| `2024-06-16 09:56:23.548` | Encrypted data is exfiltrated | `169.150.196.101` requests `GET /cusdata.xlsx.enc` from `linux-machine1` on TCP/3389, completing the observed exfiltration. |
+
+## Exploitation Path
+
+The malicious Gitea push is the cleanest pivot in the case. It occurred from the Windows VM using
+James's authenticated Gitea access and was followed almost immediately by an outbound reverse shell
+from the Gitea server.
+
+That behavior matches the dangerous Gitea git-hook execution condition associated with
+`CVE-2020-14144`. NVD marks the CVE as disputed because the vendor considered git-hook execution a
+restricted feature rather than a software bug. For this incident, the practical result still matters:
+an authenticated user with hook capability could cause code to run on the Gitea host.
+
+Once code execution landed on `gitea-vm`, the attacker used the VM's cloud identity to enumerate
+Cloud Storage and Compute Engine resources. The same identity also aligned with OS Login policy
+checks during SSH lateral movement to the other Linux hosts.
+
+The breach completed when `linux-machine1` used the storage service account to access the sensitive
+bucket and retrieve the customer spreadsheet. The attacker then encrypted the spreadsheet with
+`file-xor.py` and served the `.enc` file over HTTP on TCP/3389.
+
+## Root Cause
+
+The breach came from a chain of weaknesses:
+
+1. `windows-machine` exposed RDP to the internet, allowing an external host to establish a sustained session.
+2. Gitea was served over cleartext HTTP, exposing credentials in the network capture.
+3. Valid James Gitea credentials were available on or through the Windows VM.
+4. Gitea allowed dangerous authenticated git-hook execution behavior.
+5. `gitea-vm` used an overprivileged default Compute Engine service account.
+6. That identity could enumerate resources and support OS Login-based lateral movement.
+7. `linux-machine1` had a storage service account with access to sensitive customer data.
+8. Firewall rules trusted TCP/3389 as a port number, so HTTP exfiltration over that port was not blocked.
+
+## Remediation
+
+Immediate containment:
+
+- Disable public RDP access to `windows-machine`.
+- Revoke or rotate Windows, Gitea, and Google Cloud credentials used during the incident.
+- Disable Gitea git-hook capability unless it is strictly required.
+- Remove broad permissions from the default Compute Engine service account.
+- Disable or restrict OS Login paths that allow unintended lateral movement.
+- Remove the storage service account from `linux-machine1` if the host does not require direct bucket access.
+
+Hardening:
+
+- Put Gitea behind HTTPS and enforce secure authentication.
+- Use least-privilege service accounts per workload.
+- Separate development hosts from storage access paths.
+- Restrict Cloud Storage access with IAM Conditions or service perimeter controls where possible.
+- Add firewall egress controls that validate destination and protocol, not only destination port.
+- Alert on `storage.objects.get`, `storage.objects.update`, and bucket listing activity from unexpected VM identities.
+- Alert when HTTP traffic appears on ports reserved for administrative protocols such as TCP/3389.
+
+## Interview Takeaway
+
+The strongest explanation is that the attacker entered through the exposed Windows VM, used James's
+Gitea access to trigger authenticated git-hook execution on the Gitea server, abused the Gitea VM's
+cloud service account for discovery and lateral movement, then used a storage service account from
+`linux-machine1` to retrieve and exfiltrate the customer spreadsheet.
+
+The key lesson is that cloud incidents often cross layers. Network exposure, application behavior,
+IAM permissions, and storage access all have to be investigated together.
+
+## References
+
+- [HTB Sherlock: MisCloud](https://app.hackthebox.com/sherlocks/MisCloud)
+- [NVD: CVE-2020-14144](https://nvd.nist.gov/vuln/detail/CVE-2020-14144)

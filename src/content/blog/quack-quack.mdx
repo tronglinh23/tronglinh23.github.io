@@ -131,7 +131,7 @@ k = 0x78 + 1 - 0x20 = 0x59
 
 **Result:** put `"Quack Quack "` at **offset `0x59`** inside `buf1`.
 
-# HTB — **Quack Quack** (pwn) Write-up
+# HTB - **Quack Quack** (pwn) Write-up
 
 ## TL;DR
 
@@ -148,9 +148,9 @@ Protections (`checksec`):
 
 Key functions (from decompilation):
 
-- `duckling()` — interactive logic with two `read()` calls.
-- `duck_attack()` — opens and prints `./flag.txt`.
-- `main()` — just calls `duckling()`.
+- `duckling()` - interactive logic with two `read()` calls.
+- `duck_attack()` - opens and prints `./flag.txt`.
+- `main()` - just calls `duckling()`.
 
 ---
 
@@ -189,7 +189,7 @@ int duck_attack() {
 ## The bug(s)
 
 1. **First `read()`** can overflow `buf1` (102 bytes into 0x70 = 112 bytes is fine, but the _trick_ is what happens next).
-2. `%s` uses **`p + 0x20`** (a pointer _into our_ first buffer) — we can aim this to any nearby stack byte sequence that isn’t NUL-terminated.
+2. `%s` uses **`p + 0x20`** (a pointer _into our_ first buffer) - we can aim this to any nearby stack byte sequence that isn’t NUL-terminated.
 3. **Second `read()`** overflows `buf2`, crossing **canary → saved RBP → RET**.
 
 ---
@@ -254,7 +254,7 @@ Layout we write (starting at `buf2`):
 
 ### Why a **partial** RET overwrite?
 
-- RET sits at **+0x68** (104). With 106 bytes, we can only **fully control 2 bytes** beyond that (bytes 104–105).
+- RET sits at **+0x68** (104). With 106 bytes, we can only **fully control 2 bytes** beyond that (bytes 104-105).
 - The original return address is into `main` epilogue (e.g., `0x401605`).
 - Binary is **non-PIE**, so high 6 bytes do **not** change across runs.
 - If we replace the **low 2 bytes** with the low 2 bytes of `duck_attack` (`0x40137f`), we turn:
@@ -272,13 +272,13 @@ b"A"*0x58
 
 ```
 
-**Endianness note:** `p16(0x137f)` writes bytes `7f 13` at offsets 104–105 (little-endian).
+**Endianness note:** `p16(0x137f)` writes bytes `7f 13` at offsets 104-105 (little-endian).
 
 ---
 
 ## Crucial gotcha: **No newlines**
 
-This binary uses `read()` — **not** line I/O. If you use `sendline()` for stage-1, the trailing `\n` becomes the **first byte** of read#2, causing it to return early. Then your stage-2 write hits a closed pipe → `BrokenPipe/EOF`. Always `send()` exact sizes for both reads.
+This binary uses `read()` - **not** line I/O. If you use `sendline()` for stage-1, the trailing `\n` becomes the **first byte** of read#2, causing it to return early. Then your stage-2 write hits a closed pipe → `BrokenPipe/EOF`. Always `send()` exact sizes for both reads.
 
 ---
 
@@ -337,6 +337,6 @@ print(io.recvall(timeout=5).decode("latin-1","ignore"))
 
 - **Never** pass user pointers to `%s` without controlling the target or bounding the read.
 - **Canaries** stop blind RIP smashes, but **leaks** turn them into speedbumps.
-- **Non-PIE** makes partial RET overwrites extremely practical—enable PIE and ASLR for real.
+- **Non-PIE** makes partial RET overwrites extremely practical - enable PIE and ASLR for real.
 
 That’s it. Clean canary leak → partial RET → `duck_attack()` → **flag**.

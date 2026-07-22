@@ -176,16 +176,16 @@ The glossary is intentionally grouped so I can review only the terms related to 
 
 | Term              | Short explanation                                                                                                                        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| SOC               | Security Operations Center. Đội theo dõi alert, điều tra sự kiện đáng ngờ, phân loại true positive/false positive và escalation khi cần. |
-| DFIR              | Digital Forensics and Incident Response. Mảng tập trung vào thu thập evidence, phân tích artifact, dựng timeline và xử lý incident.      |
-| Purple Team       | Cách học hoặc vận hành kết hợp Red Team và Blue Team: hiểu attacker làm gì để viết detection và response tốt hơn.                        |
-| IoC               | Indicator of Compromise. Dấu hiệu compromise như IP, domain, hash, file path, username, process, registry key.                           |
-| MITRE ATT&CK      | Knowledge base để map hành vi attacker thành tactic/technique, ví dụ credential access, lateral movement, exfiltration.                  |
-| Containment       | Bước chặn incident lan rộng: isolate host, disable account, revoke key, block IoC, preserve evidence.                                    |
-| Timeline          | Chuỗi timestamp theo thứ tự để trả lời: chuyện gì xảy ra trước, user/host nào bị ảnh hưởng, attacker làm gì tiếp theo.                   |
-| Evidence stacking | Không dựa vào một artifact duy nhất. Ví dụ muốn chứng minh execution thì cross-check Sysmon, Prefetch, LNK, SmartScreen, ShimCache.      |
-| SIEM              | Nền tảng gom log và alert như Splunk, Sentinel, Elastic. Dùng để search, correlate, detect và triage.                                    |
-| EDR               | Endpoint Detection and Response. Agent trên endpoint giúp thấy process, file, network, command line và response như isolate host.        |
+| SOC               | Security Operations Center. A team that monitors alerts, investigates suspicious events, classifies true positives and false positives, and escalates when needed. |
+| DFIR              | Digital Forensics and Incident Response. A discipline focused on collecting evidence, analyzing artifacts, building timelines, and handling incidents. |
+| Purple Team       | A learning or operational model that combines Red Team and Blue Team work: understanding what attackers do so detections and responses can improve. |
+| IoC               | Indicator of Compromise. A sign of compromise such as an IP address, domain, hash, file path, username, process, or registry key. |
+| MITRE ATT&CK      | A knowledge base for mapping attacker behavior to tactics and techniques, such as credential access, lateral movement, and exfiltration. |
+| Containment       | The step that stops an incident from spreading: isolate hosts, disable accounts, revoke keys, block IoCs, and preserve evidence. |
+| Timeline          | An ordered sequence of timestamps used to answer what happened first, which user or host was affected, and what the attacker did next. |
+| Evidence stacking | Avoid relying on a single artifact. For example, to prove execution, cross-check Sysmon, Prefetch, LNK, SmartScreen, and ShimCache. |
+| SIEM              | A platform that collects logs and alerts, such as Splunk, Sentinel, or Elastic. It is used for searching, correlation, detection, and triage. |
+| EDR               | Endpoint Detection and Response. An endpoint agent that exposes process, file, network, command-line, and response data, such as host isolation actions. |
 
 </Spoiler>
 
@@ -193,16 +193,16 @@ The glossary is intentionally grouped so I can review only the terms related to 
 
 | Term                         | Short explanation                                                                                                                     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Sysmon                       | Windows telemetry tool ghi process creation, network connection, DNS query, file creation, registry event. Rất quan trọng trong DFIR. |
-| Event ID                     | Mã định danh của Windows event. Ví dụ 4769 liên quan Kerberos service ticket, 4768 liên quan AS-REQ/AS-REP.                           |
-| PowerShell 4104              | Event ID ghi PowerShell Script Block Logging. Rất hữu ích khi attacker chạy script hoặc command obfuscated.                           |
-| Prefetch                     | Windows artifact cho biết program từng chạy, thời gian chạy gần đây và file liên quan. Dùng để chứng minh execution.                  |
-| ShimCache / AppCompatCache   | Artifact Windows lưu dấu vết application compatibility. Có thể hỗ trợ chứng minh file từng tồn tại hoặc từng được hệ thống xử lý.     |
-| LNK / Jump List / RecentDocs | Artifact user activity. Dùng để thấy user mở file nào, shortcut nào được tạo, file nào xuất hiện gần đây.                             |
-| SmartScreen logs             | Log của Windows SmartScreen có thể hỗ trợ chứng minh app/file được mở hoặc user tương tác với file đáng ngờ.                          |
-| `$MFT`                       | Master File Table của NTFS. Chứa metadata file/folder như timestamp, path, size, record. Rất mạnh cho file-system timeline.           |
-| USN Journal                  | NTFS change journal. Ghi thay đổi file như create, delete, rename, overwrite. Hay dùng để trace lateral movement hoặc tool execution. |
-| Zone.Identifier              | Alternate Data Stream cho biết file đến từ Internet zone. Hữu ích khi điều tra downloaded file hoặc phishing attachment.              |
+| Sysmon                       | A Windows telemetry tool that records process creation, network connections, DNS queries, file creation, and registry events. It is very important in DFIR. |
+| Event ID                     | The identifier for a Windows event. For example, 4769 is related to Kerberos service tickets, and 4768 is related to AS-REQ/AS-REP activity. |
+| PowerShell 4104              | The Event ID for PowerShell Script Block Logging. It is useful when an attacker runs scripts or obfuscated commands. |
+| Prefetch                     | A Windows artifact showing that a program ran, recent execution times, and related files. It is used to help prove execution. |
+| ShimCache / AppCompatCache   | A Windows artifact that stores application compatibility traces. It can help prove that a file existed or was processed by the system. |
+| LNK / Jump List / RecentDocs | User activity artifacts. They can show which files a user opened, which shortcuts were created, and which files appeared recently. |
+| SmartScreen logs             | Windows SmartScreen logs that can help prove an app or file was opened, or that a user interacted with a suspicious file. |
+| `$MFT`                       | The NTFS Master File Table. It contains file and folder metadata such as timestamps, paths, sizes, and records. It is powerful for file-system timelines. |
+| USN Journal                  | The NTFS change journal. It records file changes such as create, delete, rename, and overwrite operations. It is often used to trace lateral movement or tool execution. |
+| Zone.Identifier              | An Alternate Data Stream showing that a file came from the Internet zone. It is useful when investigating downloaded files or phishing attachments. |
 
 </Spoiler>
 
@@ -210,26 +210,26 @@ The glossary is intentionally grouped so I can review only the terms related to 
 
 | Term               | Short explanation                                                                                                                 |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| PCAP               | Packet capture. File ghi network packets để phân tích traffic, protocol, request/response, beaconing, C2 hoặc exfiltration.       |
-| Suricata           | IDS/IPS engine tạo alert từ network traffic. Trong SOC lab, alert Suricata thường là điểm bắt đầu để pivot sang PCAP.             |
-| C2                 | Command and Control. Kênh attacker dùng để gửi lệnh, nhận output, deploy payload, maintain access hoặc exfiltrate data.           |
-| Beaconing          | Pattern kết nối lặp lại theo interval. Thường dùng để phát hiện C2 khi host gọi ra ngoài đều đặn.                                 |
-| DNS tunneling      | Kỹ thuật nhét data hoặc command vào DNS query/response để tránh detection truyền thống.                                           |
-| DGA                | Domain Generation Algorithm. Malware tự sinh nhiều domain để tìm C2 server, làm blocklist khó hơn.                                |
-| LLMNR              | Link-Local Multicast Name Resolution. Giao thức Windows dùng để hỏi tên host trong LAN khi DNS không resolve được, chạy UDP 5355. |
-| NBT-NS             | NetBIOS Name Service. Giao thức cũ hơn để resolve NetBIOS name trong LAN, chạy UDP 137, thường bị abuse cùng LLMNR.               |
-| NetNTLMv2          | Challenge-response hash Windows gửi khi xác thực NTLM. Attacker có thể capture rồi crack offline hoặc relay.                      |
-| NTLM relay         | Attacker chuyển tiếp NTLM authentication của victim sang service khác để đăng nhập thay victim, thường liên quan SMB/LDAP.        |
-| SMB signing        | Cơ chế ký SMB message để giảm rủi ro relay. Nếu không enforced, NTLM relay dễ xảy ra hơn.                                         |
-| Kerberoasting      | Attack xin Kerberos service ticket cho SPN account rồi crack offline để lấy password service account.                             |
-| AS-REP roasting    | Attack nhắm user không bật Kerberos pre-authentication, lấy AS-REP rồi crack offline.                                             |
-| Rubeus             | Tool phổ biến cho Kerberos abuse như Kerberoasting, AS-REP roasting, ticket manipulation.                                         |
-| PowerView          | PowerShell tool dùng để enumerate Active Directory: user, group, session, ACL, SPN, trust.                                        |
-| NTDS.dit           | Database của Active Directory chứa domain data và password hashes. Nếu bị dump là incident nghiêm trọng.                          |
-| Volume Shadow Copy | Windows snapshot mechanism. Attacker có thể abuse để copy locked files như `NTDS.dit`.                                            |
-| Pass-the-Hash      | Lateral movement technique dùng NTLM hash để authenticate mà không cần plaintext password.                                        |
-| PsExec             | Sysinternals tool cho remote execution qua SMB/service creation. Legit admin tool nhưng attacker hay abuse để lateral movement.   |
-| Named pipe         | IPC mechanism trên Windows. Một số remote execution/C2/lateral movement tools để lại named pipe artifacts.                        |
+| PCAP               | Packet capture. A file containing network packets for analyzing traffic, protocols, request/response flows, beaconing, C2, or exfiltration. |
+| Suricata           | An IDS/IPS engine that generates alerts from network traffic. In SOC labs, Suricata alerts are often the starting point for pivoting into PCAP analysis. |
+| C2                 | Command and Control. The channel attackers use to send commands, receive output, deploy payloads, maintain access, or exfiltrate data. |
+| Beaconing          | A repeated connection pattern at a regular interval. It is often used to detect C2 when a host calls out consistently. |
+| DNS tunneling      | A technique that hides data or commands inside DNS queries and responses to evade traditional detection. |
+| DGA                | Domain Generation Algorithm. Malware generates many domains to locate a C2 server, making blocklists harder to maintain. |
+| LLMNR              | Link-Local Multicast Name Resolution. A Windows protocol used to query hostnames on a LAN when DNS cannot resolve them. It uses UDP 5355. |
+| NBT-NS             | NetBIOS Name Service. An older protocol for resolving NetBIOS names on a LAN. It uses UDP 137 and is often abused alongside LLMNR. |
+| NetNTLMv2          | A challenge-response hash sent by Windows during NTLM authentication. Attackers can capture it and crack it offline or relay it. |
+| NTLM relay         | An attack where the attacker forwards a victim's NTLM authentication to another service to log in as the victim, often involving SMB or LDAP. |
+| SMB signing        | A mechanism that signs SMB messages to reduce relay risk. If it is not enforced, NTLM relay is easier to perform. |
+| Kerberoasting      | An attack that requests a Kerberos service ticket for an SPN account and cracks it offline to recover the service account password. |
+| AS-REP roasting    | An attack targeting users without Kerberos pre-authentication enabled, allowing the attacker to obtain an AS-REP and crack it offline. |
+| Rubeus             | A common tool for Kerberos abuse, including Kerberoasting, AS-REP roasting, and ticket manipulation. |
+| PowerView          | A PowerShell tool used to enumerate Active Directory users, groups, sessions, ACLs, SPNs, and trusts. |
+| NTDS.dit           | The Active Directory database containing domain data and password hashes. A dump of this file is a serious incident. |
+| Volume Shadow Copy | A Windows snapshot mechanism. Attackers can abuse it to copy locked files such as `NTDS.dit`. |
+| Pass-the-Hash      | A lateral movement technique that uses an NTLM hash to authenticate without needing the plaintext password. |
+| PsExec             | A Sysinternals tool for remote execution through SMB and service creation. It is a legitimate admin tool but is often abused for lateral movement. |
+| Named pipe         | An IPC mechanism on Windows. Some remote execution, C2, and lateral movement tools leave named pipe artifacts. |
 
 </Spoiler>
 
@@ -237,18 +237,18 @@ The glossary is intentionally grouped so I can review only the terms related to 
 
 | Term                | Short explanation                                                                                                                 |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| CloudTrail          | AWS audit log cho API activity từ console, CLI, SDK. Dùng để điều tra IAM abuse, EC2, S3, access key activity.                    |
-| EC2 / S3            | EC2 là compute instance của AWS; S3 là object storage. Hai dịch vụ này hay xuất hiện trong cloud IR case.                         |
-| Web shell           | File/script trên web server cho phép attacker chạy command hoặc quản lý server từ xa.                                             |
-| SQLite              | Lightweight database dạng file. Hay gặp trong app/web artifact, browser data, hoặc lab web compromise.                            |
-| PE file             | Windows executable format như `.exe` hoặc `.dll`. Malware triage thường bắt đầu từ PE metadata, strings, imports.                 |
-| PEStudio            | Tool static triage PE file: imports, strings, indicators, entropy, suspicious metadata.                                           |
-| Ghidra              | Reverse engineering tool để đọc decompiled code, function, string reference và malware logic.                                     |
-| VirusTotal          | Dịch vụ tra hash/file/domain/IP để xem detection, relations, community notes và threat context.                                   |
-| Volatility          | Memory forensics framework để phân tích RAM dump: process, network connection, command line, injected code.                       |
-| Chainsaw            | Tool hunt Windows Event Logs bằng Sigma rules hoặc keyword logic, thường dùng để lọc nhanh event đáng ngờ.                        |
-| Exfiltration        | Hành vi đưa dữ liệu ra khỏi môi trường nạn nhân. Evidence có thể nằm ở network traffic, cloud logs, archive files, upload events. |
-| Threat Intelligence | Context bên ngoài về IP, domain, hash, campaign, TTP, malware family hoặc actor để enrich investigation.                          |
+| CloudTrail          | AWS audit logs for API activity from the console, CLI, and SDKs. They are used to investigate IAM abuse, EC2, S3, and access key activity. |
+| EC2 / S3            | EC2 is AWS compute infrastructure; S3 is object storage. Both services commonly appear in cloud incident response cases. |
+| Web shell           | A file or script on a web server that allows an attacker to run commands or manage the server remotely. |
+| SQLite              | A lightweight file-based database. It is often found in application artifacts, web artifacts, browser data, and web compromise labs. |
+| PE file             | A Windows executable format such as `.exe` or `.dll`. Malware triage often starts with PE metadata, strings, and imports. |
+| PEStudio            | A static triage tool for PE files, covering imports, strings, indicators, entropy, and suspicious metadata. |
+| Ghidra              | A reverse engineering tool for reading decompiled code, functions, string references, and malware logic. |
+| VirusTotal          | A service for looking up hashes, files, domains, and IP addresses to review detections, relations, community notes, and threat context. |
+| Volatility          | A memory forensics framework for analyzing RAM dumps, including processes, network connections, command lines, and injected code. |
+| Chainsaw            | A tool for hunting Windows Event Logs with Sigma rules or keyword logic. It is often used to quickly filter suspicious events. |
+| Exfiltration        | The act of moving data out of a victim environment. Evidence can appear in network traffic, cloud logs, archive files, or upload events. |
+| Threat Intelligence | External context about IPs, domains, hashes, campaigns, TTPs, malware families, or actors used to enrich an investigation. |
 
 </Spoiler>
 
