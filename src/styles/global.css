@@ -5,9 +5,9 @@
 :root {
   color-scheme: dark;
 
-  --bg-0: #080c14;
-  --bg-1: #0b111c;
-  --bg-2: #101a28;
+  --bg-0: #0c1530;
+  --bg-1: #142646;
+  --bg-2: #20375c;
 
   --surface: rgba(17, 25, 39, 0.78);
   --surface-strong: rgba(12, 19, 31, 0.94);
@@ -121,8 +121,9 @@ body::before {
     radial-gradient(circle at 8% 56%, rgba(255, 255, 255, 0.53) 0 1px, transparent 1.2px),
     radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.52) 0 1px, transparent 1.2px),
     radial-gradient(circle at 93% 31%, rgba(255, 255, 255, 0.5) 0 1px, transparent 1.2px);
-  opacity: 0.9;
-  animation: stardrift 36s linear infinite;
+  background-size: 520px 440px;
+  opacity: 0.72;
+  animation: stardrift 24s ease-in-out infinite;
 }
 
 body::after {
@@ -148,7 +149,8 @@ body::after {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.88;
+  overflow: clip;
 }
 
 .cosmic-system::before {
@@ -167,15 +169,15 @@ body::after {
 
 .cosmic-system .sun {
   position: absolute;
-  left: -84px;
-  top: -58px;
-  width: 240px;
-  height: 240px;
+  left: -110px;
+  top: -86px;
+  width: 290px;
+  height: 290px;
   border-radius: 50%;
   background: radial-gradient(circle at 34% 34%, #fff7db, #ffb96d 44%, rgba(255, 174, 100, 0) 70%);
   box-shadow:
-    0 0 160px rgba(255, 188, 108, 0.36),
-    0 0 260px rgba(255, 129, 74, 0.22);
+    0 0 160px rgba(255, 188, 108, 0.5),
+    0 0 260px rgba(255, 129, 74, 0.3);
   animation: pulse-sun 9s ease-in-out infinite;
 }
 
@@ -184,6 +186,15 @@ body::after {
   position: absolute;
   border-radius: 999px;
   transform: translateZ(0);
+  will-change: transform;
+}
+
+.cosmic-system .planet {
+  --orbit-x: 38px;
+  --orbit-y: 26px;
+  box-shadow:
+    inset -10px -7px 16px rgba(3, 8, 25, 0.62),
+    0 0 32px var(--planet-glow, rgba(130, 186, 255, 0.25));
 }
 
 .cosmic-system .planet::before {
@@ -198,97 +209,109 @@ body::after {
 .cosmic-system .planet::after {
   content: '';
   position: absolute;
-  inset: -5px;
+  inset: -3px;
   border-radius: 50%;
-  border: 1px dashed rgba(215, 229, 255, 0.08);
+  border: 1px solid rgba(215, 229, 255, 0.18);
 }
 
 .cosmic-system .mercury {
-  width: 9px;
-  height: 9px;
-  left: 16%;
-  top: 20%;
+  width: 22px;
+  height: 22px;
+  left: 18%;
+  top: 15%;
   background: radial-gradient(circle at 30% 30%, #d4dcea, #7e8898 60%);
-  animation: orbit-1 34s linear infinite;
+  --planet-glow: rgba(196, 218, 245, 0.22);
+  animation: orbit-1 18s ease-in-out -7s infinite;
 }
 
 .cosmic-system .venus {
-  width: 14px;
-  height: 14px;
-  left: 24%;
-  top: 30%;
+  width: 38px;
+  height: 38px;
+  left: 88%;
+  top: 16%;
   background: radial-gradient(circle at 30% 30%, #f5d7aa, #bd7f44 62%);
-  animation: orbit-2 42s linear infinite;
+  --planet-glow: rgba(255, 194, 118, 0.32);
+  animation: orbit-2 24s ease-in-out -11s infinite;
 }
 
 .cosmic-system .earth {
-  width: 20px;
-  height: 20px;
-  left: 28%;
-  top: 54%;
+  width: 64px;
+  height: 64px;
+  left: 3%;
+  top: 42%;
   background:
-    radial-gradient(circle at 34% 30%, #8fe9ff, #356efe 60%),
-    radial-gradient(circle at 70% 60%, rgba(160, 255, 187, 0.76), transparent 54%);
-  box-shadow: 0 0 20px rgba(80, 176, 255, 0.6);
-  animation: orbit-3 52s linear infinite;
+    radial-gradient(ellipse at 32% 40%, rgba(127, 230, 181, 0.9), transparent 28%),
+    radial-gradient(ellipse at 65% 66%, rgba(113, 210, 166, 0.75), transparent 25%),
+    radial-gradient(circle at 34% 30%, #8fe9ff, #356efe 60%);
+  --planet-glow: rgba(80, 176, 255, 0.48);
+  animation: orbit-3 30s ease-in-out -6s infinite;
 }
 
 .cosmic-system .mars {
-  width: 12px;
-  height: 12px;
-  left: 40%;
-  top: 42%;
+  width: 30px;
+  height: 30px;
+  left: 18%;
+  top: 82%;
   background: radial-gradient(circle at 30% 30%, #ffa38a, #b84e36 62%);
-  animation: orbit-2 60s linear infinite;
+  --planet-glow: rgba(255, 127, 101, 0.32);
+  animation: orbit-2 22s ease-in-out -16s infinite;
 }
 
 .cosmic-system .jupiter {
-  width: 30px;
-  height: 30px;
-  left: 63%;
-  top: 28%;
+  width: 86px;
+  height: 86px;
+  left: 88%;
+  top: 34%;
   background: linear-gradient(140deg, #e2cab0, #bd916a 50%, #ead8c7 92%);
-  animation: orbit-4 70s linear infinite;
+  --planet-glow: rgba(240, 191, 138, 0.32);
+  animation: orbit-4 38s ease-in-out -14s infinite;
 }
 
 .cosmic-system .saturn {
-  width: 26px;
-  height: 26px;
-  left: 71%;
-  top: 56%;
+  width: 70px;
+  height: 70px;
+  left: 86%;
+  top: 72%;
   background: radial-gradient(circle at 35% 30%, #f3e1b8, #c5a372 60%);
-  animation: orbit-3 80s linear infinite;
+  --planet-glow: rgba(246, 216, 150, 0.36);
+  animation: orbit-3 34s ease-in-out -22s infinite;
 }
 
 .cosmic-system .saturn::before {
   content: '';
   position: absolute;
-  left: -10px;
-  top: 4px;
-  width: 46px;
-  height: 18px;
+  inset: auto;
+  left: -42%;
+  top: 24%;
+  width: 184%;
+  height: 50%;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.14);
-  transform: rotate(-15deg);
+  border: 5px solid rgba(241, 219, 173, 0.62);
+  background: transparent;
+  box-shadow:
+    0 0 0 3px rgba(241, 219, 173, 0.15),
+    0 0 24px rgba(241, 219, 173, 0.22);
+  transform: rotate(-24deg);
 }
 
 .cosmic-system .uranus {
-  width: 18px;
-  height: 18px;
-  left: 82%;
-  top: 22%;
+  width: 42px;
+  height: 42px;
+  left: 8%;
+  top: 73%;
   background: radial-gradient(circle at 30% 30%, #cdf8ff, #6aaebb 62%);
-  animation: orbit-4 90s linear infinite;
+  --planet-glow: rgba(139, 237, 249, 0.35);
+  animation: orbit-4 28s ease-in-out -17s infinite;
 }
 
 .cosmic-system .neptune {
-  width: 18px;
-  height: 18px;
-  left: 87%;
-  top: 68%;
+  width: 48px;
+  height: 48px;
+  left: 74%;
+  top: 92%;
   background: radial-gradient(circle at 30% 30%, #89b6ff, #33458d 62%);
-  animation: orbit-2 100s linear infinite;
+  --planet-glow: rgba(126, 162, 255, 0.42);
+  animation: orbit-1 32s ease-in-out -8s infinite;
 }
 
 .cosmic-system .asteroid {
@@ -498,6 +521,9 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
 
 [data-effects='reduced'] .cosmic-system,
 [data-effects='reduced'] .cosmic-system::before,
+[data-effects='reduced'] .cosmic-system *,
+[data-effects='reduced'] .cosmic-system *::before,
+[data-effects='reduced'] .cosmic-system *::after,
 [data-effects='reduced'] body::before,
 [data-effects='reduced'] body::after,
 [data-effects='reduced'] [data-animated='true'] {
@@ -673,51 +699,65 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
   }
 }
 
+/* Offset phases and different paths keep the existing planets in continuous motion. */
 @keyframes orbit-1 {
-  0% {
-    transform: translate(0, 0);
+  0%,
+  100% {
+    transform: translate3d(var(--orbit-x), 0, 0);
+  }
+  25% {
+    transform: translate3d(0, var(--orbit-y), 0);
   }
   50% {
-    transform: translate(9px, -6px);
+    transform: translate3d(calc(-1 * var(--orbit-x)), 0, 0);
   }
-  100% {
-    transform: translate(0, 0);
+  75% {
+    transform: translate3d(0, calc(-1 * var(--orbit-y)), 0);
   }
 }
-
 @keyframes orbit-2 {
-  0% {
-    transform: translate(0, 0);
+  0%,
+  100% {
+    transform: translate3d(0, calc(-1 * var(--orbit-y)), 0);
+  }
+  25% {
+    transform: translate3d(calc(-1 * var(--orbit-x)), 0, 0);
   }
   50% {
-    transform: translate(-11px, 8px);
+    transform: translate3d(0, var(--orbit-y), 0);
   }
-  100% {
-    transform: translate(0, 0);
+  75% {
+    transform: translate3d(var(--orbit-x), 0, 0);
   }
 }
-
 @keyframes orbit-3 {
-  0% {
-    transform: translate(0, 0);
+  0%,
+  100% {
+    transform: translate3d(calc(-1 * var(--orbit-x)), 0, 0);
+  }
+  25% {
+    transform: translate3d(0, calc(-1 * var(--orbit-y)), 0);
   }
   50% {
-    transform: translate(7px, 11px);
+    transform: translate3d(var(--orbit-x), 0, 0);
   }
-  100% {
-    transform: translate(0, 0);
+  75% {
+    transform: translate3d(0, var(--orbit-y), 0);
   }
 }
-
 @keyframes orbit-4 {
-  0% {
-    transform: translate(0, 0);
+  0%,
+  100% {
+    transform: translate3d(0, var(--orbit-y), 0);
+  }
+  25% {
+    transform: translate3d(var(--orbit-x), 0, 0);
   }
   50% {
-    transform: translate(-9px, -9px);
+    transform: translate3d(0, calc(-1 * var(--orbit-y)), 0);
   }
-  100% {
-    transform: translate(0, 0);
+  75% {
+    transform: translate3d(calc(-1 * var(--orbit-x)), 0, 0);
   }
 }
 
@@ -759,7 +799,38 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
 
 @media (max-width: 760px) {
   .cosmic-system {
-    opacity: 0.58;
+    opacity: 0.7;
+  }
+  .cosmic-system .planet {
+    --orbit-x: 18px;
+    --orbit-y: 22px;
+  }
+  .cosmic-system .earth {
+    width: 44px;
+    height: 44px;
+    left: 1%;
+  }
+  .cosmic-system .jupiter {
+    width: 56px;
+    height: 56px;
+    left: 89%;
+  }
+  .cosmic-system .saturn {
+    width: 46px;
+    height: 46px;
+    left: 83%;
+  }
+  .cosmic-system .venus {
+    left: 83%;
+  }
+  .cosmic-system .uranus {
+    width: 30px;
+    height: 30px;
+    left: 1%;
+  }
+  .cosmic-system .neptune {
+    width: 34px;
+    height: 34px;
   }
 
   body::after {
@@ -792,22 +863,20 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
   }
 }
 
-/* Logbook: quiet orbital details, readable pages, and a mint accent. */
+/* Brighter nebula lighting keeps the cosmic background visible around the content. */
 body {
   background:
-    radial-gradient(ellipse at 85% 0%, rgba(77, 129, 152, 0.12), transparent 44%),
-    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    radial-gradient(ellipse at 3% 12%, rgba(102, 141, 240, 0.3), transparent 42%),
+    radial-gradient(ellipse at 98% 30%, rgba(151, 103, 224, 0.26), transparent 44%),
+    radial-gradient(ellipse at 74% 92%, rgba(52, 181, 202, 0.18), transparent 48%),
+    linear-gradient(160deg, var(--bg-0), var(--bg-1) 58%, var(--bg-2));
   background-attachment: fixed;
 }
-body::before {
-  opacity: 0.22;
+/* Keep long writeups legible while the planets remain visible in the margins. */
+body:has(.article-grid) .cosmic-system {
+  opacity: 0.55;
 }
-body::after {
-  opacity: 0.12;
-}
-.cosmic-system {
-  opacity: 0.12;
-}
+
 .section-kicker {
   border: 0;
   background: transparent;
