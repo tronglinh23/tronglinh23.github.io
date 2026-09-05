@@ -1,33 +1,35 @@
 ---
-import TagPill from '@/components/TagPill.astro';
-import { entrySlug, formatDate } from '@/lib/utils';
+import { entrySlug, formatDate, categoryLabel } from '@/lib/utils';
 import { basePath } from '@/lib/base';
 
 const { entry } = Astro.props;
 const data = entry.data;
-const slug = entrySlug(entry);
+const resources = 1 + (data.extra_links?.length ?? 0);
+const domain = new URL(data.source_url).hostname.replace(/^www\./, '');
 ---
 
 <a
-  href={`${basePath}/links/${slug}`}
-  class="surface-panel interactive-card card-spotlight block rounded-3xl p-5"
+  href={`${basePath}/links/${entrySlug(entry)}`}
+  class="post-card"
+  data-category="research"
   data-reveal
 >
-  <div class="text-xs tracking-wide text-white/52">{formatDate(data.date)} · {data.category}</div>
-  <h3 class="mt-2 text-xl font-semibold text-white/92">{data.title}</h3>
-  <p class="mt-2 text-sm text-white/72">{data.description}</p>
-
-  {
-    (data.tags ?? []).length > 0 && (
-      <div class="mt-4 flex flex-wrap gap-2">
-        {(data.tags ?? []).slice(0, 8).map((t) => (
-          <TagPill tag={t} link={false} />
-        ))}
-      </div>
-    )
-  }
-
-  <div class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-sky-100/88">
-    Open links <span class="text-white/56">→</span>
+  <div class="post-card-meta">
+    <span class="category-label">{categoryLabel(data.category)}</span>
+    <span class="post-card-date"
+      ><time datetime={data.date.toISOString()}>{formatDate(data.date)}</time></span
+    >
+  </div>
+  <div class="post-card-heading">
+    <h3>{data.title}</h3><span class="post-card-arrow" aria-hidden="true">↗</span>
+  </div>
+  <p class="post-card-description">{data.description}</p>
+  <div class="post-card-footer">
+    <div class="post-card-tags">
+      {(data.tags ?? []).slice(0, 8).map((tag) => <span>#{tag}</span>)}
+    </div>
+    <span class="post-card-details"
+      >{domain} · {resources} {resources === 1 ? 'resource' : 'resources'}</span
+    >
   </div>
 </a>

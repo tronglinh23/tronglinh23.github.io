@@ -1,8 +1,36 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import readingTime from 'reading-time';
 
 export function formatDate(d: Date) {
-  return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: '2-digit' });
+  return d.toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    timeZone: 'UTC',
+  });
+}
+
+export function readingMinutes(body = '') {
+  return Math.max(1, Math.ceil(readingTime(body).minutes));
+}
+
+export function categoryLabel(category: string) {
+  return (
+    (
+      {
+        web: 'Web',
+        pwn: 'Pwn',
+        crypto: 'Crypto',
+        rev: 'Reversing',
+        for: 'Forensics',
+        forensics: 'Forensics',
+        misc: 'Misc',
+        research: 'Research',
+        general: 'General',
+      } as Record<string, string>
+    )[category] ?? category
+  );
 }
 
 export function slugifyTag(tag: string) {
@@ -26,9 +54,11 @@ export function blogPath(entry: SlugLike, basePath = '') {
   return `${basePath}/blog/${entrySlug(entry)}`;
 }
 
-export function getEntryMtime(entry: { id: string; collection: string }) {
+export function getEntryMtime(entry: { id: string; collection: string; filePath?: string }) {
   try {
-    const filePath = path.join(process.cwd(), 'src', 'content', entry.collection, entry.id);
+    const filePath = entry.filePath
+      ? path.resolve(process.cwd(), entry.filePath)
+      : path.join(process.cwd(), 'src', 'content', entry.collection, entry.id);
     return fs.statSync(filePath).mtimeMs;
   } catch {
     return 0;

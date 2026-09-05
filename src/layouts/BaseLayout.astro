@@ -4,12 +4,11 @@ import Header from '@/components/Header.astro';
 import Footer from '@/components/Footer.astro';
 import ReadingProgress from '@/components/ReadingProgress.astro';
 import { basePath } from '@/lib/base';
+import { site } from '@/config/site';
 
 const { title, description, noProgress } = Astro.props;
-const pageTitle = title ? `${title} • Logbook` : 'Logbook';
-const pageDesc =
-  description ??
-  'Writeups, research notes, and curated links about web security, exploitation, and CTF problem-solving.';
+const pageTitle = title ? `${title} • ${site.title}` : site.title;
+const pageDesc = description ?? site.description;
 ---
 
 <!doctype html>

@@ -1,5 +1,6 @@
 ---
 import { site } from '@/config/site';
+import { basePath } from '@/lib/base';
 ---
 
 <footer class="mt-14 border-t border-white/10 bg-black/20">
@@ -17,6 +18,7 @@ import { site } from '@/config/site';
     </div>
 
     <div class="flex flex-wrap gap-2">
+      <a class="quiet-action px-3" href={`${basePath}/rss.xml`}>RSS ↗</a>
       {
         site.socials.map((s) => (
           <a

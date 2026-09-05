@@ -1,34 +1,79 @@
 ---
-const { headings = [] } = Astro.props;
-
-function indentClass(depth) {
-  if (depth >= 3) return 'pl-6';
-  if (depth >= 2) return 'pl-3';
-  return 'pl-0';
-}
+const { headings = [], mobile = false } = Astro.props;
+const sections = headings.filter((heading) => heading.depth <= 3);
 ---
 
 {
-  headings.length > 0 && (
-    <aside
-      class="surface-panel sticky top-24 hidden max-h-[72vh] w-64 overflow-auto rounded-3xl p-4 lg:block"
-      data-reveal
-    >
-      <div class="mb-3 text-xs font-semibold tracking-[0.12em] text-white/64">ON THIS PAGE</div>
-      <nav class="space-y-1 text-sm">
-        {headings
-          .filter((h) => h.depth <= 3)
-          .map((h) => (
+  sections.length > 0 &&
+    (mobile ? (
+      <details class="mobile-toc">
+        <summary>
+          On this page <span>{sections.length} sections</span>
+        </summary>
+        <nav aria-label="Article contents">
+          {sections.map((heading) => (
             <a
-              class={`block rounded-xl px-2 py-1.5 text-white/68 transition hover:bg-white/7 hover:text-white ${indentClass(
-                h.depth
-              )}`}
-              href={`#${h.slug}`}
+              class:list={['toc-link', { 'toc-nested': heading.depth >= 3 }]}
+              href={`#${heading.slug}`}
             >
-              {h.text}
+              {heading.text}
             </a>
           ))}
-      </nav>
-    </aside>
-  )
+        </nav>
+      </details>
+    ) : (
+      <aside class="desktop-toc">
+        <div class="toc-title">On this page</div>
+        <nav aria-label="Article contents">
+          {sections.map((heading) => (
+            <a
+              class:list={['toc-link', { 'toc-nested': heading.depth >= 3 }]}
+              href={`#${heading.slug}`}
+            >
+              {heading.text}
+            </a>
+          ))}
+        </nav>
+        <a class="toc-back" href="#main-content">
+          Back to top ↑
+        </a>
+      </aside>
+    ))
 }
+
+<script>
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc-link'));
+  const headings = Array.from(
+    new Set(
+      links
+        .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+        .filter((heading): heading is HTMLElement => Boolean(heading))
+    )
+  );
+  if (headings.length && 'IntersectionObserver' in window) {
+    const update = () => {
+      let active = headings[0];
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top <= 180) active = heading;
+        else break;
+      }
+      links.forEach((link) => {
+        const current = decodeURIComponent(link.hash.slice(1)) === active.id;
+        if (current) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    };
+    const observer = new IntersectionObserver(update, {
+      rootMargin: '-100px 0px -60% 0px',
+      threshold: 0,
+    });
+    headings.forEach((heading) => observer.observe(heading));
+    update();
+  }
+  document.querySelectorAll<HTMLAnchorElement>('.mobile-toc .toc-link').forEach((link) =>
+    link.addEventListener('click', () => {
+      const disclosure = link.closest('details');
+      if (disclosure) disclosure.open = false;
+    })
+  );
+</script>

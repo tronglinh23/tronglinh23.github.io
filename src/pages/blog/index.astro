@@ -23,7 +23,7 @@ const items = buildSearchItems(posts, basePath);
     description="CTF writeups, research notes, and deep dives."
   />
 
-  <SearchAndFilters items={items} />
+  <SearchAndFilters items={items} posts={posts} />
 
   <div id="results" class="mt-6 grid gap-4">
     {pagePosts.map((p) => <PostCard entry={p} href={blogPath(p, basePath)} />)}
@@ -31,7 +31,12 @@ const items = buildSearchItems(posts, basePath);
 
   {
     totalPages > 1 && (
-      <nav class="mt-8 flex items-center justify-between text-sm text-white/72" data-reveal>
+      <nav
+        data-archive-pagination
+        aria-label="Blog pages"
+        class="mt-8 flex items-center justify-between text-sm text-white/72"
+        data-reveal
+      >
         <span>Page 1 of {totalPages}</span>
         <a
           class="rounded-2xl border border-white/14 bg-black/24 px-3 py-2 text-white/80 transition hover:border-white/24 hover:bg-white/12 hover:text-white"

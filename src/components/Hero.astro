@@ -1,101 +1,61 @@
 ---
-import AnimatedButton from '@/components/ui/AnimatedButton.astro';
 import { basePath } from '@/lib/base';
+import { getBlogPosts, getLinkPosts } from '@/lib/collections';
+import { site } from '@/config/site';
+
+const posts = await getBlogPosts();
+const links = await getLinkPosts();
+const topics = [
+  { label: 'Web exploitation', query: 'category=web' },
+  { label: 'Cloud security', query: 'tag=cloud-security' },
+  { label: 'Forensics', query: 'category=for' },
+  { label: 'Binary exploitation', query: 'category=pwn' },
+];
 ---
 
-<section
-  class="surface-panel card-spotlight relative overflow-hidden rounded-[2rem] p-7 md:p-10"
-  data-reveal
->
-  <div
-    class="pointer-events-none absolute inset-0 opacity-90"
-    data-animated="true"
-    style="
-      background:
-        radial-gradient(960px 460px at 8% 8%, rgba(84,190,255,0.3), transparent 60%),
-        radial-gradient(820px 420px at 82% 24%, rgba(255,150,124,0.24), transparent 60%),
-        radial-gradient(920px 560px at 42% 114%, rgba(132,118,255,0.18), transparent 62%);
-    "
-  >
+<section class="logbook-hero" aria-labelledby="hero-title">
+  <div>
+    <div class="section-kicker">{site.author.name}'s field notes</div>
+    <h1 id="hero-title">CTF writeups &amp;<br /><span>security research.</span></h1>
+    <p class="hero-description">
+      The challenges, the rabbit holes, and what I learned along the way. Notes on web exploitation,
+      cloud security, and forensics.
+    </p>
+    <div class="hero-actions">
+      <a class="primary-action" href={`${basePath}/blog`}
+        >Explore the writeups <span aria-hidden="true">↗</span></a
+      >
+      <a class="quiet-action" href={`${basePath}/links`}
+        >Research collection <span aria-hidden="true">→</span></a
+      >
+    </div>
+    <div class="hero-stats">
+      <a href={`${basePath}/blog`}><strong>{posts.length}</strong> writeups</a>
+      <span aria-hidden="true">/</span>
+      <a href={`${basePath}/links`}><strong>{links.length}</strong> saved resources</a>
+    </div>
   </div>
-
-  <div class="relative grid gap-8 lg:grid-cols-[1.14fr_0.86fr] lg:items-center">
-    <div data-reveal data-reveal-delay="1">
-      <div class="section-kicker">Mission Log</div>
-
-      <h1 class="section-title mt-4 text-4xl leading-tight md:text-5xl">
-        <span class="aurora-text">CTF writeups</span>
-        and research.
-      </h1>
-
-      <p class="section-desc mt-4 max-w-2xl text-base md:text-lg">
-        A focused space for exploitation notes, CTF debriefs, and practical security playbooks you
-        can reuse.
-      </p>
-
-      <div class="mt-7 flex flex-wrap gap-3">
-        <AnimatedButton href={`${basePath}/blog`} label="Read writeups" />
-        <a
-          class="rounded-2xl border border-white/16 bg-black/24 px-4 py-2 text-sm text-white/80 transition hover:border-white/30 hover:bg-white/8 hover:text-white"
-          href={`${basePath}/links`}
-        >
-          Research vault →
+  <aside class="hero-directory" aria-label="Browse by focus area">
+    <div class="directory-heading">
+      <img src={`${basePath}/astronaut.svg`} alt="" width="36" height="36" /><span
+        >Pick a rabbit hole</span>
+    </div>
+    {
+      topics.map((topic, i) => (
+        <a href={`${basePath}/blog?${topic.query}`}>
+          <>
+            <span class="directory-number">0{i + 1}</span>
+            <span>{topic.label}</span>
+            <span aria-hidden="true">↗</span>
+          </>
         </a>
-      </div>
-
-      <div class="mt-6 flex flex-wrap gap-2 text-xs">
-        <span class="chip">Web</span>
-        <span class="chip">Cloud</span>
-        <span class="chip">Pwn</span>
-        <span class="chip">Rev</span>
-        <span class="chip">Forensics</span>
-      </div>
-    </div>
-
-    <div data-reveal data-reveal-delay="2">
-      <div class="surface-panel--strong subtle-grid rounded-[1.7rem] p-6">
-        <div class="flex items-center justify-between">
-          <div class="text-xs uppercase tracking-[0.14em] text-white/62">Astronaut Console</div>
-          <div
-            class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-[10px] text-emerald-100/90"
-          >
-            active
-          </div>
-        </div>
-
-        <div class="mt-5 flex items-center gap-3">
-          <img
-            class="h-14 w-14 rounded-2xl border border-white/16 bg-black/30 p-2.5"
-            src={`${basePath}/astronaut.svg`}
-            alt="astronaut"
-            data-animated="true"
-          />
-          <div>
-            <div class="text-lg font-semibold text-white/92">v1ncent</div>
-            <div class="text-sm text-white/60">search → exploit → document</div>
-          </div>
-        </div>
-
-        <div
-          class="mt-5 space-y-2 rounded-2xl border border-white/12 bg-black/28 p-4 font-mono text-[13px] leading-relaxed text-white/85"
-        >
-          <div class="text-white/48">$ current_focus</div>
-          <div>blue-team && web-security-research</div>
-          <div class="pt-2 text-white/48">$ resources</div>
-          <a
-            class="group inline-flex max-w-full items-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/12 px-3 py-2 font-medium text-cyan-100 shadow-[0_0_20px_rgba(103,232,249,0.08)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/60 hover:bg-cyan-300/20 hover:text-white hover:shadow-[0_8px_24px_rgba(103,232,249,0.14)]"
-            href="https://xon1l.notion.site/0f7cc27a1426404e9383b15583584137?v=b53480fa8c5241b6b2577c0cb42da2e5"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>more labs and writeups</span>
-            <span
-              class="text-base leading-none transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              aria-hidden="true">↗</span
-            >
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
+      ))
+    }
+    <a
+      class="notion-link"
+      href="https://xon1l.notion.site/0f7cc27a1426404e9383b15583584137?v=b53480fa8c5241b6b2577c0cb42da2e5"
+      target="_blank"
+      rel="noopener noreferrer">Older labs on Notion <span aria-hidden="true">↗</span></a
+    >
+  </aside>
 </section>

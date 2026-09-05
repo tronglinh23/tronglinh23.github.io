@@ -50,3 +50,17 @@ Push to `main`. The workflow will build and deploy.
 ## Customize
 - Edit `src/config/site.ts` for your name, bio, social links, and site URL.
 - Replace `public/astronaut.svg` and `public/og-default.png` if desired.
+
+## Archive and reading features
+
+- Search titles, descriptions, and tags; combine category, difficulty, event, and exact tag filters.
+- Filter URLs can be bookmarked or shared. Press `/` on the blog archive to focus search.
+- Clearing filters restores the current archive page; active filters search the whole collection.
+- Posts include estimated reading time and a table of contents on desktop and mobile.
+- The effects setting is saved on the reader's device and respects reduced-motion preferences.
+
+Run the search and date regression checks with Node 24:
+
+```bash
+npm test
+```

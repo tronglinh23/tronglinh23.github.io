@@ -1,309 +1,251 @@
 ---
-/**
- * Props:
- * - items: array of { title, description, date, href, tags, category, difficulty, ctf_event }
- * - initialCategory?: string
- */
-const { items, initialCategory } = Astro.props;
+import PostCard from '@/components/PostCard.astro';
+import { categoryLabel } from '@/lib/utils';
 
-const unique = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const { items, posts, currentPage = 1, pageSize = 10 } = Astro.props;
+const unique = (values: string[]) =>
+  [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 const categories = unique(items.map((i) => i.category));
 const difficulties = unique(items.map((i) => i.difficulty));
 const events = unique(items.map((i) => i.ctf_event));
-const tags = unique(items.flatMap((i) => i.tags || []));
-
-const payload = JSON.stringify({ items, categories, difficulties, events, tags, initialCategory });
+const tags = unique(items.flatMap((i) => i.tags));
+const tagCounts = new Map<string, number>();
+for (const item of items)
+  for (const tag of item.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+const popularTags = [...tagCounts]
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  .slice(0, 8);
+const first = items.length ? (currentPage - 1) * pageSize + 1 : 0;
+const last = Math.min(currentPage * pageSize, items.length);
+const defaultCount = `Showing ${first}–${last} of ${items.length} writeups`;
 ---
 
-<div class="surface-panel rounded-3xl p-5" data-search-payload={payload}>
-  <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+<section
+  class="archive-search"
+  data-search-payload={JSON.stringify(items)}
+  data-default-count={defaultCount}
+  aria-label="Find a writeup"
+>
+  <div class="search-input-wrap">
+    <label for="q" class="sr-only">Search writeup titles, descriptions, and tags</label>
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      ><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg
+    >
     <input
       id="q"
-      class="w-full rounded-2xl border border-white/14 bg-black/22 px-4 py-3 text-sm text-white/88 placeholder:text-white/42 focus:border-white/28 focus:outline-none"
-      placeholder="Search title, tags, description..."
+      type="search"
+      placeholder="Find a writeup, technique, or challenge…"
       autocomplete="off"
     />
-    <select
-      id="cat"
-      class="w-full rounded-2xl border border-white/14 bg-black/22 px-4 py-3 text-sm text-white/88 focus:border-white/28 focus:outline-none"
-    >
-      <option value="">All categories</option>
-      {categories.map((c) => <option value={c}>{c}</option>)}
-    </select>
-    <select
-      id="diff"
-      class="w-full rounded-2xl border border-white/14 bg-black/22 px-4 py-3 text-sm text-white/88 focus:border-white/28 focus:outline-none"
-    >
-      <option value="">All difficulty</option>
-      {difficulties.map((d) => <option value={d}>{d}</option>)}
-    </select>
-    <select
-      id="evt"
-      class="w-full rounded-2xl border border-white/14 bg-black/22 px-4 py-3 text-sm text-white/88 focus:border-white/28 focus:outline-none"
-    >
-      <option value="">All events</option>
-      {events.map((e) => <option value={e}>{e}</option>)}
-    </select>
-    <select
-      id="sort"
-      class="w-full rounded-2xl border border-white/14 bg-black/22 px-4 py-3 text-sm text-white/88 focus:border-white/28 focus:outline-none"
-    >
-      <option value="newest">Sort: Newest</option>
-      <option value="oldest">Sort: Oldest</option>
-      <option value="title">Sort: Title A-Z</option>
-    </select>
+    <kbd aria-hidden="true">/</kbd>
   </div>
-
-  <div class="mt-4 flex flex-wrap items-center gap-2">
-    <div class="text-xs text-white/56">Quick tags:</div>
-    <div id="tagCloud" class="flex flex-wrap gap-2"></div>
-  </div>
-
-  <div class="mt-4 flex items-center justify-between gap-2 text-xs text-white/56">
-    <div><span id="count"></span></div>
-    <button
-      id="reset"
-      class="rounded-xl border border-white/14 bg-white/6 px-3 py-2 text-white/76 hover:bg-white/12 hover:text-white"
-      type="button"
+  <div class="search-filter-grid">
+    <label
+      >Category<select id="cat"
+        ><option value="">All categories</option>{
+          categories.map((c) => <option value={c}>{categoryLabel(c)}</option>)
+        }</select
+      ></label
     >
-      Reset
-    </button>
+    <label
+      >Difficulty<select id="diff"
+        ><option value="">Any difficulty</option>{
+          difficulties.map((d) => <option value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)
+        }</select
+      ></label
+    >
+    <label
+      >Event<select id="evt"
+        ><option value="">All events</option>{
+          events.map((e) => <option value={e}>{e}</option>)
+        }</select
+      ></label
+    >
+    <label
+      >Tag<select id="tag"
+        ><option value="">All tags</option>{tags.map((t) => <option value={t}>{t}</option>)}</select
+      ></label
+    >
   </div>
-</div>
+  <div class="quick-tags">
+    <span>Popular</span>{
+      popularTags.map(([tag]) => (
+        <button type="button" data-quick-tag={tag} aria-pressed="false">
+          #{tag}
+        </button>
+      ))
+    }
+  </div>
+  <div class="search-status-row">
+    <p id="count" role="status" aria-live="polite" aria-atomic="true">{defaultCount}</p>
+    <div class="search-status-actions">
+      <button id="reset" type="button" hidden>Clear filters</button>
+      <label class="sr-only" for="sort">Sort writeups</label>
+      <select id="sort"
+        ><option value="newest">Newest first</option><option value="oldest">Oldest first</option
+        ><option value="title">Title A–Z</option></select
+      >
+    </div>
+  </div>
+  <noscript
+    ><p class="mt-3 text-sm text-white/70">
+      Search needs JavaScript. You can still browse every writeup using the page navigation below.
+    </p></noscript
+  >
+  {
+    items.map((item, index) => (
+      <template data-search-card={item.slug}>
+        <PostCard entry={posts[index]} href={item.href} />
+      </template>
+    ))
+  }
+</section>
 
-<script is:inline>
-  const root = document.currentScript?.previousElementSibling;
-  const raw = root?.getAttribute('data-search-payload') || '{}';
-  const DATA = JSON.parse(raw);
+<script>
+  import {
+    isSearchActive,
+    readSearchState,
+    selectSearchItems,
+    type SearchItem,
+    type SearchState,
+  } from '@/lib/search';
 
-  function initSearch() {
-    const elQ = document.getElementById('q');
-    const elCat = document.getElementById('cat');
-    const elDiff = document.getElementById('diff');
-    const elEvt = document.getElementById('evt');
-    const elSort = document.getElementById('sort');
-    const elCount = document.getElementById('count');
-    const elTagCloud = document.getElementById('tagCloud');
-    const elReset = document.getElementById('reset');
-    const list = document.getElementById('results');
+  const root = document.querySelector<HTMLElement>('[data-search-payload]');
+  const list = document.getElementById('results');
+  if (root && list) {
+    const items: SearchItem[] = JSON.parse(root.dataset.searchPayload || '[]');
+    const query = root.querySelector<HTMLInputElement>('#q')!;
+    const category = root.querySelector<HTMLSelectElement>('#cat')!;
+    const difficulty = root.querySelector<HTMLSelectElement>('#diff')!;
+    const event = root.querySelector<HTMLSelectElement>('#evt')!;
+    const tag = root.querySelector<HTMLSelectElement>('#tag')!;
+    const sort = root.querySelector<HTMLSelectElement>('#sort')!;
+    const count = root.querySelector<HTMLElement>('#count')!;
+    const reset = root.querySelector<HTMLButtonElement>('#reset')!;
+    const pagination = document.querySelector<HTMLElement>('[data-archive-pagination]');
+    const original = list.innerHTML;
+    const templates = new Map(
+      Array.from(root.querySelectorAll<HTMLTemplateElement>('template[data-search-card]')).map(
+        (template) => [template.dataset.searchCard, template]
+      )
+    );
+    const quickTags = root.querySelectorAll<HTMLButtonElement>('[data-quick-tag]');
+    const controls = { q: query, category, difficulty, event, tag, sort };
 
-    if (
-      !elQ ||
-      !elCat ||
-      !elDiff ||
-      !elEvt ||
-      !elSort ||
-      !elCount ||
-      !elTagCloud ||
-      !elReset ||
-      !list
-    )
-      return;
-
-    const defaultMarkup = list.innerHTML;
-
-    function renderTags() {
-      elTagCloud.innerHTML = '';
-      const top = (DATA.tags || [])
-        .filter((t) => typeof t === 'string' && t.trim().length > 0)
-        .slice(0, 20);
-
-      top.forEach((t) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className =
-          'rounded-full border border-white/14 bg-white/6 px-3 py-1 text-xs text-white/76 hover:bg-white/12 hover:text-white';
-        b.textContent = '#' + t;
-        b.addEventListener('click', () => {
-          elQ.value = t;
-          apply();
-        });
-        elTagCloud.appendChild(b);
-      });
+    function state(): SearchState {
+      return {
+        q: query.value.trim(),
+        category: category.value,
+        difficulty: difficulty.value,
+        event: event.value,
+        tag: tag.value,
+        sort: sort.value as SearchState['sort'],
+      };
     }
 
-    function matches(item, q, cat, diff, evt) {
-      if (cat && item.category !== cat) return false;
-      if (diff && item.difficulty !== diff) return false;
-      if (evt && item.ctf_event !== evt) return false;
-
-      if (!q) return true;
-      const hay = [
-        item.title,
-        item.description,
-        item.category,
-        item.difficulty,
-        item.ctf_event,
-        ...(item.tags || []),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return hay.includes(q.toLowerCase());
-    }
-
-    function sortItems(items, mode) {
-      const list = [...items];
-      if (mode === 'oldest') {
-        return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    function apply(updateUrl = true) {
+      const filters = state();
+      const active = isSearchActive(filters);
+      if (pagination) pagination.hidden = active;
+      reset.hidden = !active;
+      quickTags.forEach((button) =>
+        button.setAttribute('aria-pressed', String(button.dataset.quickTag === filters.tag))
+      );
+      if (!active) {
+        list!.innerHTML = original;
+        count.textContent = root!.dataset.defaultCount || '';
+      } else {
+        const results = selectSearchItems(items, filters);
+        count.textContent = `${results.length} ${results.length === 1 ? 'writeup' : 'writeups'} found`;
+        list!.replaceChildren();
+        const fragment = document.createDocumentFragment();
+        for (const item of results) {
+          const template = templates.get(item.slug);
+          if (template) fragment.appendChild(template.content.cloneNode(true));
+        }
+        if (!results.length) {
+          const empty = document.createElement('div');
+          empty.className = 'search-empty';
+          const heading = document.createElement('h2');
+          heading.textContent = 'No writeups found';
+          const hint = document.createElement('p');
+          hint.textContent = 'Try a broader search or clear your filters to explore the archive.';
+          const clear = document.createElement('button');
+          clear.type = 'button';
+          clear.className = 'quiet-action';
+          clear.textContent = 'Clear all filters →';
+          clear.addEventListener('click', clearFilters);
+          empty.append(heading, hint, clear);
+          fragment.appendChild(empty);
+        }
+        list!.appendChild(fragment);
       }
-      if (mode === 'title') {
-        return list.sort((a, b) => a.title.localeCompare(b.title));
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        for (const [key, value] of Object.entries(filters)) {
+          if (value && !(key === 'sort' && value === 'newest')) url.searchParams.set(key, value);
+          else url.searchParams.delete(key);
+        }
+        window.history.replaceState(null, '', url);
       }
-      return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }
-
-    function createEl(tag, className, text) {
-      const el = document.createElement(tag);
-      if (className) el.className = className;
-      if (text !== undefined) el.textContent = text;
-      return el;
-    }
-
-    function renderResults(items) {
-      list.innerHTML = '';
-      if (!items.length) {
-        list.appendChild(
-          createEl(
-            'div',
-            'rounded-3xl border border-white/14 bg-white/5 p-6 text-sm text-white/66',
-            'No matches found. Try a different query or clear filters.'
-          )
-        );
-        return;
-      }
-
-      const frag = document.createDocumentFragment();
-      items.forEach((it) => {
-        const card = createEl(
-          'a',
-          'surface-panel interactive-card card-spotlight group block rounded-3xl p-5'
-        );
-        card.href = it.href;
-
-        const header = createEl('div', 'flex items-start justify-between gap-4');
-        const left = createEl('div');
-        left.appendChild(
-          createEl('div', 'text-xs tracking-wide text-white/52', it.dateLabel || '')
-        );
-        left.appendChild(
-          createEl(
-            'h3',
-            'mt-2 text-xl font-semibold text-white/92 group-hover:text-white',
-            it.title
-          )
-        );
-        left.appendChild(createEl('p', 'mt-2 line-clamp-2 text-sm text-white/72', it.description));
-
-        const right = createEl(
-          'div',
-          'hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/14 bg-black/26 text-white/70 transition group-hover:translate-x-0.5 group-hover:border-white/26 group-hover:text-white md:flex',
-          '↗'
-        );
-        header.appendChild(left);
-        header.appendChild(right);
-        card.appendChild(header);
-
-        const tagsWrap = createEl('div', 'mt-4 flex flex-wrap gap-2');
-        (it.tags || [])
-          .filter((t) => typeof t === 'string' && t.trim().length > 0)
-          .slice(0, 5)
-          .forEach((t) => {
-            tagsWrap.appendChild(
-              createEl(
-                'span',
-                'inline-flex items-center rounded-full border border-white/14 bg-white/6 px-3 py-1 text-xs text-white/78',
-                `#${t}`
-              )
-            );
-          });
-        card.appendChild(tagsWrap);
-
-        const meta = createEl('div', 'mt-4 flex flex-wrap gap-2 text-xs text-white/58');
-        if (it.ctf_event)
-          meta.appendChild(
-            createEl(
-              'span',
-              'inline-flex rounded-full border border-white/14 bg-white/6 px-3 py-1',
-              it.ctf_event
-            )
-          );
-        if (it.category)
-          meta.appendChild(
-            createEl(
-              'span',
-              'inline-flex rounded-full border border-white/14 bg-white/6 px-3 py-1',
-              it.category
-            )
-          );
-        if (it.difficulty)
-          meta.appendChild(
-            createEl(
-              'span',
-              'inline-flex rounded-full border border-white/14 bg-white/6 px-3 py-1',
-              it.difficulty
-            )
-          );
-        card.appendChild(meta);
-
-        frag.appendChild(card);
-      });
-      list.appendChild(frag);
-    }
-
-    function apply() {
-      const q = elQ.value.trim();
-      const cat = elCat.value;
-      const diff = elDiff.value;
-      const evt = elEvt.value;
-      const sort = elSort.value;
-
-      const filtered = (DATA.items || []).filter((it) => matches(it, q, cat, diff, evt));
-      const sorted = sortItems(filtered, sort);
-
-      elCount.textContent = sorted.length + ' results';
-
-      const isDefault = !q && !cat && !diff && !evt && sort === 'newest';
-      if (isDefault) {
-        list.innerHTML = defaultMarkup;
-        document.dispatchEvent(new CustomEvent('ui:results-updated'));
-        return;
-      }
-
-      renderResults(sorted);
       document.dispatchEvent(new CustomEvent('ui:results-updated'));
     }
 
-    let applyTimer;
-    function scheduleApply() {
-      clearTimeout(applyTimer);
-      applyTimer = setTimeout(apply, 120);
-    }
-
-    elQ.addEventListener('input', scheduleApply);
-    elCat.addEventListener('change', apply);
-    elDiff.addEventListener('change', apply);
-    elEvt.addEventListener('change', apply);
-    elSort.addEventListener('change', apply);
-
-    elReset.addEventListener('click', () => {
-      elQ.value = '';
-      elCat.value = '';
-      elDiff.value = '';
-      elEvt.value = '';
-      elSort.value = 'newest';
+    let timer: ReturnType<typeof setTimeout>;
+    function clearFilters() {
+      clearTimeout(timer);
+      for (const control of Object.values(controls)) control.value = '';
+      sort.value = 'newest';
       apply();
+      query.focus();
+    }
+    function restore() {
+      clearTimeout(timer);
+      const filters = readSearchState(new URLSearchParams(window.location.search));
+      for (const [key, control] of Object.entries(controls))
+        control.value = filters[key as keyof SearchState];
+      if (!sort.value) sort.value = 'newest';
+      apply(false);
+    }
+    query.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => apply(), 120);
     });
-
-    renderTags();
-    if (DATA.initialCategory) elCat.value = DATA.initialCategory;
-    apply();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSearch);
-  } else {
-    initSearch();
+    for (const select of [category, difficulty, event, tag, sort])
+      select.addEventListener('change', () => {
+        clearTimeout(timer);
+        apply();
+      });
+    reset.addEventListener('click', clearFilters);
+    quickTags.forEach((button) =>
+      button.addEventListener('click', () => {
+        tag.value = tag.value === button.dataset.quickTag ? '' : button.dataset.quickTag || '';
+        clearTimeout(timer);
+        apply();
+      })
+    );
+    document.addEventListener('keydown', (e) => {
+      const target = e.target;
+      if (
+        e.key !== '/' ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        !(target instanceof HTMLElement) ||
+        target.closest('input, textarea, select, [contenteditable]')
+      )
+        return;
+      e.preventDefault();
+      query.focus();
+    });
+    window.addEventListener('popstate', restore);
+    restore();
   }
 </script>

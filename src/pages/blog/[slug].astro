@@ -2,7 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import TOC from '@/components/TOC.astro';
 import TagPill from '@/components/TagPill.astro';
-import { entrySlug, formatDate } from '@/lib/utils';
+import { entrySlug, formatDate, readingMinutes, categoryLabel } from '@/lib/utils';
 import { basePath } from '@/lib/base';
 import { render } from 'astro:content';
 import { getBlogPosts } from '@/lib/collections';
@@ -17,29 +17,33 @@ const { Content, headings } = await render(p);
 ---
 
 <BaseLayout title={p.data.title} description={p.data.description}>
-  <div class="grid gap-10 lg:grid-cols-[1fr_260px]">
-    <article class="min-w-0" data-reveal>
-      <div class="mb-8 rounded-3xl border border-white/12 bg-white/5 p-5 md:p-6">
-        <div class="text-xs tracking-wide text-white/54">
+  <div class="article-grid">
+    <article class="min-w-0">
+      <a class="article-back" href={`${basePath}/blog`}>← All writeups</a>
+      <header class="article-header">
+        <div class="article-date">
+          <span>{readingMinutes(p.body)} min read · </span>
           {formatDate(p.data.date)}{
             p.data.updated ? ` · updated ${formatDate(p.data.updated)}` : ''
           }
           {p.data.ctf_event ? ` · ${p.data.ctf_event}` : ''}
         </div>
-        <h1 class="section-title mt-3 text-3xl leading-tight md:text-4xl">{p.data.title}</h1>
-        <p class="mt-3 text-white/72">{p.data.description}</p>
+        <h1 class="section-title article-title">{p.data.title}</h1>
+        {p.data.description && <p class="article-description">{p.data.description}</p>}
 
         <div class="mt-4 flex flex-wrap gap-2">
           {(p.data.tags ?? []).map((t) => <TagPill tag={t} />)}
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2 text-xs text-white/58">
-          {p.data.category && <span class="chip">{p.data.category}</span>}
+          {p.data.category && <span class="chip">{categoryLabel(p.data.category)}</span>}
           {p.data.difficulty && <span class="chip">{p.data.difficulty}</span>}
         </div>
-      </div>
+      </header>
 
-      <div class="surface-panel--strong prose prose-invert max-w-none rounded-3xl p-6 md:p-8">
+      <TOC headings={headings} mobile />
+
+      <div class="article-body prose prose-invert max-w-none">
         <Content />
       </div>
 

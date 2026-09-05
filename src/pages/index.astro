@@ -16,10 +16,8 @@ const blog = (await getBlogPosts()).slice(0, 4);
     <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
         <div class="section-kicker">Latest Logs</div>
-        <h2 class="section-title mt-2 text-2xl">Recent Writeups</h2>
-        <p class="section-desc mt-1 text-sm">
-          Fresh notes from CTF events, labs, and post-exploitation practice.
-        </p>
+        <h2 class="section-title mt-2 text-2xl">Latest writeups</h2>
+        <p class="section-desc mt-1 text-sm">From recent investigations and challenges.</p>
       </div>
       <a
         class="rounded-xl border border-white/14 bg-white/6 px-3 py-2 text-sm text-white/78 hover:border-white/24 hover:bg-white/12 hover:text-white"
@@ -29,7 +27,7 @@ const blog = (await getBlogPosts()).slice(0, 4);
       </a>
     </div>
 
-    <div class="grid gap-4">
+    <div class="recent-grid">
       {blog.map((p) => <PostCard entry={p} href={blogPath(p, basePath)} />)}
     </div>
   </section>
