@@ -568,6 +568,7 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
 }
 
 .prose pre {
+  padding-block: 1rem;
   border: 1px solid rgba(177, 214, 255, 0.18);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
 }
@@ -604,6 +605,11 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
   overflow-x: auto;
 }
 
+pre[data-copy-ready='1'] {
+  /* Keep Copy beside the first line, without an empty row above the code. */
+  padding-right: 5rem;
+}
+
 .code-copy-btn {
   position: absolute;
   right: 0.72rem;
@@ -613,6 +619,7 @@ html[data-effects='full'][data-reveal-active='1'] [data-reveal].is-revealed {
   background: rgba(9, 16, 32, 0.86);
   padding: 0.34rem 0.55rem;
   font-size: 0.75rem;
+  line-height: 1.5;
   color: rgba(234, 243, 255, 0.92);
   transition:
     transform 0.2s ease,
@@ -1445,8 +1452,16 @@ body:has(.article-grid) .cosmic-system {
 .article-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 230px;
-  gap: 3.5rem;
+  gap: 2rem;
   align-items: start;
+}
+.reading-panel {
+  /* Opaque: moving planets and nebula light must never show through the text. */
+  background: #111c2e;
+  border: 1px solid rgba(173, 207, 255, 0.18);
+  border-radius: 1.1rem;
+  padding: clamp(1.15rem, 3vw, 2.5rem);
+  box-shadow: 0 18px 60px rgba(3, 9, 22, 0.25);
 }
 .article-back {
   display: inline-block;
@@ -1477,14 +1492,37 @@ body:has(.article-grid) .cosmic-system {
   overflow-wrap: anywhere;
 }
 .article-description {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: #a9bcd2;
   line-height: 1.85;
   margin-top: 1.25rem;
 }
 .article-body {
-  font-size: 1.0625rem;
-  line-height: 1.9;
+  max-width: none;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  letter-spacing: 0;
+}
+.article-body,
+.article-body .prose {
+  --tw-prose-body: #d5e0ef;
+  --tw-prose-headings: #f2f6fc;
+  --tw-prose-bold: #f2f6fc;
+  --tw-prose-quotes: #dce7f5;
+  --tw-prose-counters: #b2c5dc;
+  --tw-prose-bullets: #b2c5dc;
+  --tw-prose-captions: #b2c5dc;
+  --tw-prose-code: #ffda9e;
+}
+.article-body .prose {
+  font-size: inherit;
+  line-height: 1.8;
+}
+.article-body :not(pre) > code {
+  border-radius: 0.25rem;
+  background: #223149;
+  padding: 0.12em 0.3em;
+  font-weight: 500;
 }
 .article-body :is(h1, h2, h3, h4) {
   scroll-margin-top: 7rem;
@@ -1502,7 +1540,6 @@ body:has(.article-grid) .cosmic-system {
 .article-body pre {
   font-size: 0.875rem;
   line-height: 1.75;
-  padding-top: 3.3rem;
   border-radius: 0.7rem;
 }
 .article-body img {
@@ -1512,12 +1549,17 @@ body:has(.article-grid) .cosmic-system {
 .article-body a {
   color: #9bdacb;
 }
+.article-body table {
+  overflow-wrap: normal;
+  word-break: normal;
+}
 .desktop-toc {
   position: sticky;
   top: 7rem;
-  padding-left: 1.1rem;
-  border-left: 1px solid var(--stroke-soft);
-  margin-top: 3.6rem;
+  padding: 1.1rem;
+  border: 1px solid var(--stroke-soft);
+  border-radius: 0.85rem;
+  background: #111c2e;
 }
 .toc-title {
   font:
@@ -1537,7 +1579,7 @@ body:has(.article-grid) .cosmic-system {
   display: block;
   padding: 0.5rem 0.65rem;
   font-size: 0.875rem;
-  color: #91a7c0;
+  color: #b2c5dc;
   line-height: 1.6;
   border-radius: 0.4rem;
   overflow-wrap: anywhere;
