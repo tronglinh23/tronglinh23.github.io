@@ -1,5 +1,5 @@
 export const site = {
-  title: 'Logbook',
+  title: 'V1NCENT',
   description:
     'Writeups, research notes, and curated links about web security, exploitation, and CTF problem-solving.',
   author: {

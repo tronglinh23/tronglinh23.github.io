@@ -1373,8 +1373,31 @@ body:has(.article-grid) .cosmic-system {
   font-weight: 600;
   letter-spacing: -0.05em;
 }
-.brand-dot {
-  color: var(--accent-cyan);
+.brand-wordmark {
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  color: #8ff0db;
+  background: linear-gradient(110deg, #8ff0db, #7dd3fc, #c4a0ff, #8ff0db);
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: brand-color-flow 7s ease-in-out infinite alternate;
+}
+.brand-digit {
+  color: #ffbf69;
+  -webkit-text-fill-color: #ffbf69;
+  text-shadow: 0 0 14px rgb(255 170 70 / 35%);
+}
+@keyframes brand-color-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
 }
 .desktop-nav {
   display: flex;

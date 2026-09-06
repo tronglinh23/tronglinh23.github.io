@@ -16,7 +16,13 @@ const isActive = (href: string) => {
   <div class="site-header-inner">
     <a class="site-brand" href={`${basePath}/`} aria-label={`${site.title} home`}>
       <img src={`${basePath}/astronaut.svg`} width="38" height="38" alt="" />
-      <span>{site.title}<span class="brand-dot">.</span></span>
+      <span class="brand-wordmark" data-animated="true" aria-hidden="true">
+        {
+          site.title
+            .split('')
+            .map((letter) => <span class:list={{ 'brand-digit': letter === '1' }}>{letter}</span>)
+        }
+      </span>
     </a>
     <nav class="desktop-nav" aria-label="Main navigation">
       {
